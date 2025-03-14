@@ -104,19 +104,20 @@
             line-height: 1.4;
         }
         
-        .game-showcase {
+        .play-button {
+            display: inline-block;
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            background-color: var(--apple-accent);
             border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            margin: 0 auto;
-            max-width: 800px;
-            background-color: black;
+            text-decoration: none;
+            transition: background-color 0.2s;
         }
         
-        .game-showcase img {
-            width: 100%;
-            height: auto;
-            display: block;
+        .play-button:hover {
+            background-color: var(--apple-highlight);
         }
         
         .previous-games {
@@ -226,11 +227,9 @@
         <section class="hero">
             <div class="eyebrow">Game of the Day</div>
             <div class="date" id="current-date"></div>
-            <h1>Pong</h1>
-            <p class="hero-description">Classic Pong game. How far can you get? :)</p>
-            <div class="game-showcase">
-                <img src="/api/placeholder/800/450" alt="Celestial Odyssey gameplay screenshot">
-            </div>
+            <h1>Archer</h1>
+            <p class="hero-description">Pop all the Balloons! Can you make it to level 5? ;)</p>
+            <a href="https://jason724.github.io/archer/" class="play-button">PLAY</a>
         </section>
         
         <section class="previous-games">
@@ -248,7 +247,6 @@
             <h2>About</h2>
             <p>Hi I'm Jason, and I just want to make fun daily games for people. Every day I'll release a new game at midnight PDT. Stay tuned for updates!</p>
         </section>
-        
     </div>
 
     <script>
@@ -261,18 +259,21 @@
         // Previous games data
         const previousGames = [
             {
-                date: new Date(2025, 2, 12), // March 12, 2025
-                name: "Shadow Realms",
-                category: "Action RPG",
+                date: new Date(2025, 2, 13), // March 12, 2025
+                name: "Pong",
+                category: "Old School",
+                url: "https://jason724.github.io/pong/"
             },
-/*
+    /*
             {
                 date: new Date(2025, 2, 11), // March 11, 2025
                 name: "Neon Drift",
                 category: "Racing",
-                thumbnail: "/api/placeholder/160/160"
+                thumbnail: "/api/placeholder/160/160",
+                url: "https://example.com/neon-drift"
             },
-*/
+    */
+            // Add more games as needed
         ];
         
         // Generate previous games list
@@ -293,7 +294,7 @@
                     <div class="game-name">${game.name}</div>
                     <div class="game-category">${game.category}</div>
                 </div>
-                <button class="cta-button">Get</button>
+                <a href="${game.url}" class="cta-button">Get</a>
             `;
             
             gameListElement.appendChild(gameElement);
