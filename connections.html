@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Connections Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .word-tile {
+            background-color: #fff;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            padding: 15px 10px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .word-tile.selected {
+            background-color: #d3e9f8;
+            border-color: #4a90e2;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            text-align: center;
+            margin-bottom: 15px;
+            min-height: 20px;
+            font-weight: bold;
+        }
+        .correct-group {
+            display: flex;
+            flex-direction: column;
+            border: 2px solid;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+        .correct-group-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .correct-group-words {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+        .correct-word {
+            padding: 10px 5px;
+            text-align: center;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+        }
+        #solving-area {
+            margin-bottom: 20px;
+        }
+        #solved-groups {
+            margin-top: 20px;
+        }
+        .yellow { background-color: #f9d04b; border-color: #f9d04b; }
+        .green { background-color: #65b063; border-color: #65b063; }
+        .blue { background-color: #4a90e2; border-color: #4a90e2; }
+        .purple { background-color: #b768d4; border-color: #b768d4; }
+        
+        .lives {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        #game-over, #win-screen {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        #game-over {
+            background-color: #ffebee;
+            border: 2px solid #f44336;
+            color: #d32f2f;
+        }
+        
+        #win-screen {
+            background-color: #e8f5e9;
+            border: 2px solid #4caf50;
+            color: #2e7d32;
+        }
+        
+        .rules {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .hint-button {
+            background-color: #ff9800;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Word Connections</h1>
+    <div class="rules">
+        <p><strong>Rules:</strong> Find groups of 4 words that share a common theme. Select 4 words and submit to check if they belong together.</p>
+    </div>
+    
+    <div class="lives">Lives: <span id="lives-count">4</span></div>
+    <div class="message" id="message"></div>
+    
+    <div id="solving-area">
+        <div class="game-board" id="game-board"></div>
+        
+        <div class="controls">
+            <button id="submit-btn" disabled>Submit Selection</button>
+            <button id="deselect-btn" disabled>Deselect All</button>
+            <button id="hint-btn" class="hint-button">Hint</button>
+        </div>
+    </div>
+    
+    <div id="solved-groups"></div>
+    
+    <div id="game-over">
+        <h2>Game Over!</h2>
+        <p>You've run out of lives. Better luck next time!</p>
+        <button id="restart-btn">Play Again</button>
+    </div>
+    
+    <div id="win-screen">
+        <h2>You Win!</h2>
+        <p>Congratulations! You found all the connections!</p>
+        <button id="restart-btn-win">Play Again</button>
+    </div>
+    
+    <script>
+        // Game data
+        const puzzles = [
+            {
+                groups: [
+                    { 
+                        title: "BIRDS", 
+                        words: ["CROW", "EAGLE", "ROBIN", "DUCK"],
+                        color: "yellow"
+                    },
+                    { 
+                        title: "FRUITS", 
+                        words: ["APPLE", "PEACH", "PLUM", "PEAR"],
+                        color: "green"
+                    },
+                    { 
+                        title: "COLORS", 
+                        words: ["RED", "BLUE", "GREEN", "PINK"],
+                        color: "blue"
+                    },
+                    { 
+                        title: "BODY PARTS", 
+                        words: ["HAND", "FOOT", "EYE", "EAR"],
+                        color: "purple"
+                    }
+                ]
+            },
+            {
+                groups: [
+                    { 
+                        title: "SPORTS", 
+                        words: ["GOLF", "RUGBY", "TENNIS", "CHESS"],
+                        color: "yellow"
+                    },
+                    { 
+                        title: "METALS", 
+                        words: ["GOLD", "IRON", "ZINC", "LEAD"],
+                        color: "green"
+                    },
+                    { 
+                        title: "PETS", 
+                        words: ["CAT", "DOG", "FISH", "BIRD"],
+                        color: "blue"
+                    },
+                    { 
+                        title: "WEATHER", 
+                        words: ["RAIN", "SNOW", "WIND", "FOG"],
+                        color: "purple"
+                    }
+                ]
+            },
+            {
+                groups: [
+                    { 
+                        title: "PLANETS", 
+                        words: ["MARS", "VENUS", "EARTH", "PLUTO"],
+                        color: "yellow"
+                    },
+                    { 
+                        title: "TOOLS", 
+                        words: ["SAW", "DRILL", "NAIL", "HAMMER"],
+                        color: "green"
+                    },
+                    { 
+                        title: "DRINKS", 
+                        words: ["MILK", "WATER", "SODA", "TEA"],
+                        color: "blue"
+                    },
+                    { 
+                        title: "CLOTHES", 
+                        words: ["SOCK", "SHIRT", "PANTS", "HAT"],
+                        color: "purple"
+                    }
+                ]
+            }
+        ];
+        
+        // Game state
+        let currentPuzzle;
+        let allWords = [];
+        let selectedWords = [];
+        let solvedGroups = [];
+        let lives = 4;
+        let hintCount = 0;
+        
+        // DOM elements
+        const gameBoard = document.getElementById('game-board');
+        const submitBtn = document.getElementById('submit-btn');
+        const deselectBtn = document.getElementById('deselect-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const message = document.getElementById('message');
+        const solvedGroupsEl = document.getElementById('solved-groups');
+        const livesCount = document.getElementById('lives-count');
+        const gameOver = document.getElementById('game-over');
+        const winScreen = document.getElementById('win-screen');
+        const restartBtn = document.getElementById('restart-btn');
+        const restartBtnWin = document.getElementById('restart-btn-win');
+        
+        // Initialize game
+        function initGame() {
+            // Reset game state
+            selectedWords = [];
+            solvedGroups = [];
+            lives = 4;
+            hintCount = 0;
+            livesCount.textContent = lives;
+            message.textContent = '';
+            solvedGroupsEl.innerHTML = '';
+            gameOver.style.display = 'none';
+            winScreen.style.display = 'none';
+            
+            // Pick a random puzzle
+            currentPuzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+            
+            // Flatten all words and shuffle
+            allWords = [];
+            currentPuzzle.groups.forEach(group => {
+                group.words.forEach(word => {
+                    allWords.push({
+                        word: word,
+                        group: group.title,
+                        color: group.color
+                    });
+                });
+            });
+            
+            // Shuffle the words
+            allWords.sort(() => Math.random() - 0.5);
+            
+            // Clear and rebuild the game board
+            gameBoard.innerHTML = '';
+            allWords.forEach(wordObj => {
+                const tile = document.createElement('div');
+                tile.className = 'word-tile';
+                tile.textContent = wordObj.word;
+                tile.dataset.word = wordObj.word;
+                tile.dataset.group = wordObj.group;
+                tile.dataset.color = wordObj.color;
+                
+                tile.addEventListener('click', () => handleTileClick(tile));
+                
+                gameBoard.appendChild(tile);
+            });
+            
+            // Update buttons state
+            updateButtonsState();
+        }
+        
+        // Handle tile clicks
+        function handleTileClick(tile) {
+            if (solvedGroups.some(group => group.words.includes(tile.dataset.word))) {
+                // Tile is already in a solved group
+                return;
+            }
+            
+            const isSelected = tile.classList.contains('selected');
+            
+            if (isSelected) {
+                // Deselect the tile
+                tile.classList.remove('selected');
+                selectedWords = selectedWords.filter(word => word !== tile.dataset.word);
+            } else {
+                // Select the tile if we have fewer than 4 selected
+                if (selectedWords.length < 4) {
+                    tile.classList.add('selected');
+                    selectedWords.push(tile.dataset.word);
+                }
+            }
+            
+            updateButtonsState();
+        }
+        
+        // Update buttons state based on selections
+        function updateButtonsState() {
+            submitBtn.disabled = selectedWords.length !== 4;
+            deselectBtn.disabled = selectedWords.length === 0;
+        }
+        
+        // Submit selection for checking
+        function checkSelection() {
+            // Get group for each selected word
+            const groups = selectedWords.map(word => {
+                const wordObj = allWords.find(w => w.word === word);
+                return wordObj.group;
+            });
+            
+            // Check if all words belong to the same group
+            const allSameGroup = groups.every(group => group === groups[0]);
+            
+            if (allSameGroup) {
+                // Correct group!
+                handleCorrectGroup(groups[0]);
+            } else {
+                // Incorrect selection
+                handleIncorrectSelection();
+            }
+            
+            // Clear selection after checking
+            deselectAllWords();
+        }
+        
+        // Handle a correct group selection
+        function handleCorrectGroup(groupName) {
+            // Find the group object
+            const group = currentPuzzle.groups.find(g => g.title === groupName);
+            
+            // Add to solved groups
+            solvedGroups.push(group);
+            
+            // Show success message
+            message.textContent = `Correct! You found the "${groupName}" group!`;
+            
+            // Remove tiles from the game board and add to solved section
+            renderSolvedGroup(group);
+            
+            // Check if game is complete
+            if (solvedGroups.length === 4) {
+                // Game won!
+                setTimeout(() => {
+                    winScreen.style.display = 'block';
+                    document.getElementById('solving-area').style.display = 'none';
+                }, 1000);
+            }
+        }
+        
+        // Handle an incorrect selection
+        function handleIncorrectSelection() {
+            lives--;
+            livesCount.textContent = lives;
+            
+            message.textContent = 'Incorrect selection. Try again!';
+            
+            if (lives <= 0) {
+                // Game over
+                setTimeout(() => {
+                    gameOver.style.display = 'block';
+                    document.getElementById('solving-area').style.display = 'none';
+                }, 1000);
+            }
+        }
+        
+        // Render a solved group in the solved section
+        function renderSolvedGroup(group) {
+            const groupEl = document.createElement('div');
+            groupEl.className = `correct-group ${group.color}`;
+            
+            const titleEl = document.createElement('div');
+            titleEl.className = 'correct-group-title';
+            titleEl.textContent = group.title;
+            groupEl.appendChild(titleEl);
+            
+            const wordsEl = document.createElement('div');
+            wordsEl.className = 'correct-group-words';
+            
+            group.words.forEach(word => {
+                const wordEl = document.createElement('div');
+                wordEl.className = 'correct-word';
+                wordEl.textContent = word;
+                wordsEl.appendChild(wordEl);
+                
+                // Remove from game board
+                const tiles = document.querySelectorAll('.word-tile');
+                tiles.forEach(tile => {
+                    if (tile.dataset.word === word) {
+                        tile.style.visibility = 'hidden';
+                    }
+                });
+            });
+            
+            groupEl.appendChild(wordsEl);
+            solvedGroupsEl.appendChild(groupEl);
+        }
+        
+        // Deselect all words
+        function deselectAllWords() {
+            selectedWords = [];
+            document.querySelectorAll('.word-tile.selected').forEach(tile => {
+                tile.classList.remove('selected');
+            });
+            updateButtonsState();
+        }
+        
+        // Provide a hint
+        function provideHint() {
+            if (hintCount >= 3) {
+                message.textContent = "No more hints available!";
+                return;
+            }
+            
+            hintCount++;
+            
+            // Find unsolved groups
+            const unsolvedGroups = currentPuzzle.groups.filter(group => 
+                !solvedGroups.some(solved => solved.title === group.title)
+            );
+            
+            if (unsolvedGroups.length === 0) return;
+            
+            // Pick a random unsolved group
+            const randomGroup = unsolvedGroups[Math.floor(Math.random() * unsolvedGroups.length)];
+            
+            // Give a hint about this group
+            message.textContent = `Hint: Look for words related to "${randomGroup.title.toLowerCase()}"`;
+        }
+        
+        // Event listeners
+        submitBtn.addEventListener('click', checkSelection);
+        deselectBtn.addEventListener('click', deselectAllWords);
+        hintBtn.addEventListener('click', provideHint);
+        restartBtn.addEventListener('click', initGame);
+        restartBtnWin.addEventListener('click', initGame);
+        
+        // Start the game
+        initGame();
+    </script>
+</body>
+</html>

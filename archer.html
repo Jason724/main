@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balloon Archer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #87CEEB;
+        }
+        canvas {
+            display: block;
+            cursor: pointer;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div>Level: <span id="level">1</span></div>
+        <div>Arrows: <span id="arrows">3</span></div>
+        <div>Balloons: <span id="balloons">1</span></div>
+    </div>
+    <div id="level-complete" class="popup">
+        <h2>Level Complete!</h2>
+        <button id="next-level">Next Level</button>
+    </div>
+    <div id="game-complete" class="popup">
+        <h2>Congratulations!</h2>
+        <p>You beat all levels!</p>
+        <button id="restart-game">Play Again</button>
+    </div>
+
+    <script>
+        // Game canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // UI elements
+        const levelEl = document.getElementById('level');
+        const arrowsEl = document.getElementById('arrows');
+        const balloonsEl = document.getElementById('balloons');
+        const levelCompleteEl = document.getElementById('level-complete');
+        const gameCompleteEl = document.getElementById('game-complete');
+        const nextLevelBtn = document.getElementById('next-level');
+        const restartGameBtn = document.getElementById('restart-game');
+
+        // Game constants
+        const GRAVITY = 0.08;
+        const MIN_SPEED = 2;
+        const COLORS = ['#FF5252', '#FFEB3B', '#4CAF50', '#2196F3', '#9C27B0'];
+
+        // Game state
+        let gameState = {
+            level: 1,
+            arrows: 3,
+            balloonsPopped: 0,
+            archer: {
+                x: 100,
+                y: canvas.height - 100,
+                width: 30,
+                height: 60
+            },
+            bow: {
+                x: 115,
+                y: canvas.height - 75,
+                radius: 15,
+                angle: -Math.PI / 4,
+                drawPower: 0,
+                maxPower: 100,
+                isDrawing: false,
+                startX: 0,
+                startY: 0
+            },
+            arrow: {
+                x: 115,
+                y: canvas.height - 75,
+                speed: 0,
+                angle: -Math.PI / 4,
+                flying: false,
+                width: 20,
+                height: 5
+            },
+            balloons: [],
+            particles: [],
+            confetti: []
+        };
+
+        // Level configuration
+        const levels = [
+            { balloons: 1, arrows: 3 },
+            { balloons: 2, arrows: 4 },
+            { balloons: 3, arrows: 4 },
+            { balloons: 4, arrows: 3 }
+        ];
+
+        // Get random color
+        function getRandomColor() {
+            return COLORS[Math.floor(Math.random() * COLORS.length)];
+        }
+
+        // Setup level
+        function setupLevel(level) {
+            const levelConfig = levels[level - 1];
+        
+            gameState.level = level;
+            gameState.arrows = levelConfig.arrows;
+            gameState.balloonsPopped = 0;
+            gameState.arrow.flying = false;
+        
+            // Update UI
+            levelEl.textContent = level;
+            arrowsEl.textContent = levelConfig.arrows;
+            balloonsEl.textContent = levelConfig.balloons;
+        
+            // Create balloons
+            gameState.balloons = [];
+            for (let i = 0; i < levelConfig.balloons; i++) {
+                const balloon = {
+                    x: Math.min(Math.max((canvas.width / 2) + (i * 150) + Math.random() * 100, 50), canvas.width - 50),
+                    y: Math.min(Math.max(canvas.height / 2 - 150 - Math.random() * 100, 50), canvas.height - 200),
+                    radius: 35,
+                    color: getRandomColor(),
+                    speed: 0.5 + Math.random(),
+                    direction: Math.random() > 0.5 ? 1 : -1,
+                    amplitude: 20 + Math.random() * 20,
+                    phase: Math.random() * Math.PI * 2
+                };
+                balloon.originalY = balloon.y;
+                gameState.balloons.push(balloon);
+            }
+        }
+        
+        // Draw functions combined for efficiency
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw sky background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = '#8BC34A';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // Draw archer
+            drawArcher();
+            
+            // Draw bow
+            drawBow();
+            
+            // Draw arrow
+            drawArrow();
+            
+            // Draw balloons
+            drawBalloons();
+            
+            // Draw particles
+            drawParticles();
+            
+            // Draw confetti
+            drawConfetti();
+            
+            // Update UI elements
+            arrowsEl.textContent = gameState.arrows;
+            balloonsEl.textContent = gameState.balloons.length;
+        }
+
+        // Draw archer
+        function drawArcher() {
+            const { x, y, width, height } = gameState.archer;
+            ctx.beginPath();
+            ctx.arc(x + width/2, y, 15, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(x + width/2, y + 15);
+            ctx.lineTo(x + width/2, y + height - 20);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x + width/2, y + height - 20);
+            ctx.lineTo(x, y + height);
+            ctx.moveTo(x + width/2, y + height - 20);
+            ctx.lineTo(x + width, y + height);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x + width/2, y + 20);
+            ctx.lineTo(gameState.bow.x - 5, gameState.bow.y - 5);
+            ctx.stroke();
+        }
+
+        // Draw bow
+        function drawBow() {
+            const { x, y, radius, angle, drawPower, isDrawing } = gameState.bow;
+            
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            
+            // Draw aiming guide line
+            if (isDrawing) {
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(100, 0);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.setLineDash([5, 5]);
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Draw bow string
+            ctx.beginPath();
+            ctx.moveTo(0, -radius);
+            ctx.lineTo(isDrawing ? -drawPower : 0, 0);
+            ctx.lineTo(0, radius);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Draw bow
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, Math.PI * 0.5, Math.PI * 1.5, false);
+            ctx.strokeStyle = 'brown';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Bow center
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+            
+            ctx.restore();
+        }
+
+        // Draw arrow
+        function drawArrow() {
+            const { x, y, angle, width, height } = gameState.arrow;
+        
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+        
+            // Arrow shaft
+            ctx.fillStyle = '#8B4513';  // Dark brown
+            ctx.fillRect(0, -height / 4, width * 3, height / 2);  // Skinnier and longer
+        
+            // Arrow head
+            ctx.beginPath();
+            ctx.moveTo(width * 3, -height);
+            ctx.lineTo(width * 3 + 10, 0);
+            ctx.lineTo(width * 3, height);
+            ctx.fillStyle = 'silver';
+            ctx.fill();
+        
+            // Arrow fletching
+            ctx.beginPath();
+            ctx.moveTo(0, -height / 2);
+            ctx.lineTo(-5, -height);
+            ctx.lineTo(0, 0);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+        
+            ctx.beginPath();
+            ctx.moveTo(0, height / 2);
+            ctx.lineTo(-5, height);
+            ctx.lineTo(0, 0);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+        
+            ctx.restore();
+        }
+
+        // Draw balloons
+        function drawBalloons() {
+            gameState.balloons.forEach(balloon => {
+                ctx.beginPath();
+                ctx.arc(balloon.x, balloon.y, balloon.radius, 0, Math.PI * 2);
+                ctx.fillStyle = balloon.color;
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(balloon.x, balloon.y + balloon.radius);
+                ctx.lineTo(balloon.x, balloon.y + balloon.radius + 15);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+        }
+
+        // Draw particles
+        function drawParticles() {
+            gameState.particles.forEach(particle => {
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                ctx.fillStyle = particle.color;
+                ctx.fill();
+            });
+        }
+
+        // Draw confetti
+        function drawConfetti() {
+            gameState.confetti.forEach(conf => {
+                ctx.save();
+                ctx.translate(conf.x, conf.y);
+                ctx.rotate(conf.angle);
+                ctx.fillStyle = conf.color;
+                ctx.fillRect(-conf.size/2, -conf.size/2, conf.size, conf.size);
+                ctx.restore();
+            });
+        }
+
+        // Create burst particles when balloon pops
+        function createBurstParticles(x, y, color) {
+            for (let i = 0; i < 20; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3;
+                
+                gameState.particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color,
+                    size: 3 + Math.random() * 5,
+                    life: 30 + Math.random() * 30
+                });
+            }
+        }
+
+        // Create confetti for game completion
+        function createConfetti() {
+            gameState.confetti = [];
+            for (let i = 0; i < 200; i++) {
+                gameState.confetti.push({
+                    x: Math.random() * canvas.width,
+                    y: -20 - Math.random() * 100,
+                    size: 5 + Math.random() * 10,
+                    color: getRandomColor(),
+                    speed: 2 + Math.random() * 5,
+                    spin: Math.random() * 0.2 - 0.1,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        // Update game state
+        function update() {
+            updateBalloons();
+            updateArrow();
+            updateParticles();
+            updateConfetti();
+        }
+
+        // Update balloons
+        function updateBalloons() {
+            gameState.balloons.forEach(balloon => {
+                balloon.phase += 0.02;
+                balloon.y = balloon.originalY + Math.sin(balloon.phase) * balloon.amplitude;
+                balloon.x += balloon.speed * balloon.direction;
+                
+                if (balloon.x > canvas.width - balloon.radius || balloon.x < balloon.radius) {
+                    balloon.direction *= -1;
+                }
+            });
+        }
+
+        // Update arrow
+        function updateArrow() {
+            if (gameState.arrow.flying) {
+                const arrowSpeedX = Math.cos(gameState.arrow.angle) * gameState.arrow.speed;
+                const arrowSpeedY = Math.sin(gameState.arrow.angle) * gameState.arrow.speed;
+        
+                // Apply minimum speed
+                const actualSpeedX = Math.abs(arrowSpeedX) < MIN_SPEED ? Math.sign(arrowSpeedX) * MIN_SPEED : arrowSpeedX;
+                const actualSpeedY = Math.abs(arrowSpeedY) < MIN_SPEED ? Math.sign(arrowSpeedY) * MIN_SPEED : arrowSpeedY;
+        
+                gameState.arrow.x += actualSpeedX;
+                gameState.arrow.y += actualSpeedY;
+        
+                // Adjust angle based on velocity
+                gameState.arrow.angle = Math.atan2(arrowSpeedY + GRAVITY, arrowSpeedX);
+        
+                // Apply reduced air resistance and gravity
+                gameState.arrow.speed *= 0.998;
+                gameState.arrow.y += GRAVITY * 0.4;
+        
+                // Check for collisions with walls or ground and bounce
+                if (gameState.arrow.x > canvas.width) {
+                    gameState.arrow.x = canvas.width;
+                    gameState.arrow.angle = Math.PI - gameState.arrow.angle;
+                    gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
+                } else if (gameState.arrow.x < 0) {
+                    gameState.arrow.x = 0;
+                    gameState.arrow.angle = Math.PI - gameState.arrow.angle;
+                    gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
+                } else if (gameState.arrow.y > canvas.height - 50) { // Adjust for ground height
+                    gameState.arrow.y = canvas.height - 50;
+                    gameState.arrow.angle = -gameState.arrow.angle;
+                    gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
+                }
+        
+                // Check if arrow should disappear after 2 bounces
+                if (gameState.arrow.bounces >= 2) {
+                    gameState.arrow.flying = false;
+                    gameState.arrow.bounces = 0;  // Reset bounce count for the next arrow
+                }
+        
+                // Check if arrow is out of bounds
+                if (isArrowOutOfBounds()) {
+                    gameState.arrow.flying = false;
+                    checkGameState();
+                }
+        
+                // Check collision with balloons
+                checkBalloonCollision();
+            }
+        }
+        // Check if arrow is out of bounds
+        function isArrowOutOfBounds() {
+            return gameState.arrow.x > canvas.width || 
+                   gameState.arrow.x < 0 || 
+                   gameState.arrow.y > canvas.height || 
+                   gameState.arrow.y < 0;
+        }
+
+        // Update particles
+        function updateParticles() {
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const particle = gameState.particles[i];
+                
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vy += 0.1;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+        }
+
+        // Update confetti
+        function updateConfetti() {
+            for (let i = gameState.confetti.length - 1; i >= 0; i--) {
+                const conf = gameState.confetti[i];
+                
+                conf.y += conf.speed;
+                conf.angle += conf.spin;
+                
+                if (conf.y > canvas.height + 20) {
+                    gameState.confetti.splice(i, 1);
+                }
+            }
+        }
+
+        // Check for collision between arrow and balloons
+        function checkBalloonCollision() {
+            for (let i = gameState.balloons.length - 1; i >= 0; i--) {
+                const balloon = gameState.balloons[i];
+                
+                const dx = gameState.arrow.x - balloon.x;
+                const dy = gameState.arrow.y - balloon.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < balloon.radius + 15) {
+                    createBurstParticles(balloon.x, balloon.y, balloon.color);
+                    gameState.balloons.splice(i, 1);
+                    gameState.balloonsPopped++;
+                    
+                    if (gameState.balloonsPopped >= levels[gameState.level - 1].balloons) {
+                        setTimeout(() => {
+                            if (gameState.level < levels.length) {
+                                levelCompleteEl.style.display = 'block';
+                            } else {
+                                gameCompleteEl.style.display = 'block';
+                                createConfetti();
+                            }
+                        }, 500);
+                    }
+                }
+            }
+        }
+
+        // Check game state to see if player failed the level
+        function checkGameState() {
+            if (gameState.arrows <= 0 && !gameState.arrow.flying) {
+                if (gameState.balloonsPopped < levels[gameState.level - 1].balloons) {
+                    setTimeout(() => {
+                        setupLevel(gameState.level);
+                    }, 1000);
+                }
+            }
+        }
+
+        // Fire arrow
+        function fireArrow() {
+            if (gameState.arrows > 0) {
+                gameState.arrow.x = gameState.bow.x;
+                gameState.arrow.y = gameState.bow.y;
+                gameState.arrow.speed = gameState.bow.drawPower / 3;
+                gameState.arrow.angle = gameState.bow.angle;
+                gameState.arrow.flying = true;
+                gameState.arrows--;
+
+                // Start the timer to reset the arrow after 2.5 seconds
+                setTimeout(() => {
+                    if (gameState.arrow.flying) {
+                        resetArrow();
+                        }
+                    }, 2500);
+            }
+            
+            gameState.bow.isDrawing = false;
+            gameState.bow.drawPower = 0;
+        }
+
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Improved event handling - click anywhere to draw bow
+        canvas.addEventListener('mousedown', (e) => {
+            if (gameState.arrow.flying) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Start drawing bow from anywhere on screen
+            gameState.bow.isDrawing = true;
+            gameState.bow.startX = mouseX;
+            gameState.bow.startY = mouseY;
+            
+            // Set initial angle based on mouse position
+            const dx = mouseX - gameState.bow.x;
+            const dy = mouseY - gameState.bow.y;
+            gameState.bow.angle = Math.atan2(dy, dx);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameState.bow.isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Calculate draw power
+            let drawDistance = gameState.bow.startX - mouseX;
+            drawDistance *= 1.5;
+            gameState.bow.drawPower = Math.min(Math.max(drawDistance, 0), gameState.bow.maxPower);
+            
+            // Calculate angle
+            const dx = mouseX - gameState.bow.x;
+            const dy = mouseY - gameState.bow.y;
+            gameState.bow.angle = Math.atan2(dy, dx);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (gameState.bow.isDrawing) {
+                fireArrow();
+            }
+        });
+
+        // Touch events for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (gameState.arrow.flying) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            const touchY = e.touches[0].clientY - rect.top;
+            
+            // Start drawing bow from anywhere on screen
+            gameState.bow.isDrawing = true;
+            gameState.bow.startX = touchX;
+            gameState.bow.startY = touchY;
+            
+            // Set initial angle based on touch position
+            const dx = touchX - gameState.bow.x;
+            const dy = touchY - gameState.bow.y;
+            gameState.bow.angle = Math.atan2(dy, dx);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!gameState.bow.isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const touchX = e.touches[0].clientX - rect.left;
+            const touchY = e.touches[0].clientY - rect.top;
+            
+            // Calculate draw power
+            let drawDistance = gameState.bow.startX - touchX;
+            drawDistance *= 1.5;
+            gameState.bow.drawPower = Math.min(Math.max(drawDistance, 0), gameState.bow.maxPower);
+            
+            // Calculate angle
+            const dx = touchX - gameState.bow.x;
+            const dy = touchY - gameState.bow.y;
+            gameState.bow.angle = Math.atan2(dy, dx);
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (gameState.bow.isDrawing) {
+                fireArrow();
+            }
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Update archer position
+            gameState.archer.y = canvas.height - 100;
+            gameState.bow.y = canvas.height - 75;
+        });
+
+        // Next level button
+        nextLevelBtn.addEventListener('click', () => {
+            levelCompleteEl.style.display = 'none';
+            setupLevel(gameState.level + 1);
+        });
+
+        // Restart game button
+        restartGameBtn.addEventListener('click', () => {
+            gameCompleteEl.style.display = 'none';
+            setupLevel(1);
+        });
+
+        // Initialize and start game
+        setupLevel(1);
+        gameLoop();
+    </script>
+</body>
+</html>

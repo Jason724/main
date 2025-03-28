@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8-Bit Frogger: Mario Style</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #5c94fc;
+            font-family: 'Press Start 2P', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vmin;
+            height: 100vmin;
+            max-width: 600px;
+            max-height: 600px;
+            margin: 0 auto;
+            background-color: #000;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            width: 100%;
+            height: 100%;
+        }
+
+        #score-lives {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        #game-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            text-align: center;
+            z-index: 20;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            border: none;
+            color: white;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/pixel-fonts/1.0.0/press-start-2p/press-start-2p.css" rel="stylesheet">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="score-lives">SCORE: 0 LIVES: 3</div>
+        <div id="game-message">
+            <div id="message-text">GAME OVER</div>
+            <button class="restart-btn" onclick="restartGame()">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let gameWidth, gameHeight;
+        let gameRunning = false;
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let frog, safePlaces, roads, rivers, goal;
+        let vehicles = [];
+        let logs = [];
+        let coins = [];
+        
+        // Input handling
+        let keyState = {};
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        // Sprite size and grid parameters
+        let tileSize;
+        const gridWidth = 15;
+        const gridHeight = 15;
+        
+        // Animation frame handling
+        let lastTimestamp = 0;
+        let animationFrameId;
+
+        // Game sprites and colors
+        const colors = {
+            grass: '#7cfc00',
+            road: '#505050',
+            roadLine: '#ffffff',
+            river: '#5c94fc',
+            safe: '#8b4513',
+            goal: '#8b4513'
+        };
+
+        // Initialize game
+        window.onload = function() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set up game dimensions
+            resizeGame();
+            
+            // Set up event listeners for keyboard and touch controls
+            setupControls();
+            
+            // Window resize handler
+            window.addEventListener('resize', resizeGame);
+            
+            // Start the game
+            initGame();
+            gameLoop(0);
+        };
+
+        // Resize game based on window size
+        function resizeGame() {
+            const container = document.getElementById('game-container');
+            gameWidth = container.clientWidth;
+            gameHeight = container.clientHeight;
+            canvas.width = gameWidth;
+            canvas.height = gameHeight;
+            
+            // Calculate tile size based on game dimensions
+            tileSize = Math.min(gameWidth, gameHeight) / gridWidth;
+        }
+
+        // Set up controls for keyboard and touch
+        function setupControls() {
+            // Keyboard controls
+            window.addEventListener('keydown', function(e) {
+                keyState[e.code] = true;
+            });
+            
+            window.addEventListener('keyup', function(e) {
+                keyState[e.code] = false;
+            });
+            
+            // Touch controls for mobile
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            });
+            
+            canvas.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+            });
+            
+            canvas.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                const touchEndX = e.changedTouches[0].clientX;
+                const touchEndY = e.changedTouches[0].clientY;
+                
+                const diffX = touchEndX - touchStartX;
+                const diffY = touchEndY - touchStartY;
+                
+                // Determine swipe direction based on largest difference
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    // Horizontal swipe
+                    if (diffX > 20) {
+                        moveFrog('right');
+                    } else if (diffX < -20) {
+                        moveFrog('left');
+                    }
+                } else {
+                    // Vertical swipe
+                    if (diffY > 20) {
+                        moveFrog('down');
+                    } else if (diffY < -20) {
+                        moveFrog('up');
+                    }
+                }
+            });
+        }
+
+        // Initialize game state
+        function initGame() {
+            gameRunning = true;
+            score = 0;
+            lives = 3;
+            level = 1;
+            
+            // Create game objects
+            createGameMap();
+            spawnFrog();
+            updateScoreAndLives();
+            
+            // Hide any game messages
+            document.getElementById('game-message').style.display = 'none';
+        }
+
+        // Create the game map with different zones
+        function createGameMap() {
+            // Define safe zones
+            safePlaces = [
+                { y: 14 * tileSize, height: tileSize }, // Start area
+                { y: 7 * tileSize, height: tileSize }   // Middle safe zone
+            ];
+            
+            // Define road areas
+            if (level <= 4) {
+                roads = [
+                    { y: 8 * tileSize, height: 3 * tileSize }  // Basic road section
+                ];
+            } else if (level <= 6) {
+                roads = [
+                    { y: 8 * tileSize, height: 4 * tileSize }  // Extended road section
+                ];
+            } else {
+                roads = [
+                    { y: 8 * tileSize, height: 5 * tileSize }  // Maximum road section
+                ];
+            }
+            
+            // Define river areas
+            rivers = [
+                { y: 2 * tileSize, height: 5 * tileSize }  // River section
+            ];
+            
+            // Define goal area
+            goal = { y: 0, height: 2 * tileSize };
+            
+            // Create vehicles
+            createVehicles();
+            
+            // Create logs
+            createLogs();
+            
+            // Create coins
+            createCoins();
+            
+            // Add level-specific hazards
+            if (level > 5) {
+                addHazards();
+            }
+        }
+        
+        // Add hazards based on level
+        function addHazards() {
+            // For level 6+, add alligators in the river that appear occasionally
+            // For level 8+, add random lily pads that sink after a moment
+            // These are visual indicators only - the mechanics are handled in other functions
+        }
+
+        // Create vehicle objects
+        function createVehicles() {
+            vehicles = [];
+            
+            // Calculate difficulty factor (caps at level 8 for sanity)
+            const diffLevel = Math.min(level, 8);
+            
+            // Lane 1 - Cars moving right (increase count with level)
+            const lane1Count = Math.min(diffLevel, 4);
+            for (let i = 0; i < lane1Count; i++) {
+                vehicles.push({
+                    x: i * (gameWidth / lane1Count) - tileSize * 2,
+                    y: 10 * tileSize,
+                    width: tileSize * 2,
+                    height: tileSize,
+                    speed: 0.7 + (diffLevel * 0.15), // Faster at higher levels
+                    color: '#e74c3c'
+                });
+            }
+            
+            // Lane 2 - Trucks moving left (increase count with level)
+            if (level > 1) { // Only add trucks from level 2
+                const lane2Count = Math.min(diffLevel - 1, 4);
+                for (let i = 0; i < lane2Count; i++) {
+                    vehicles.push({
+                        x: i * (gameWidth / lane2Count),
+                        y: 9 * tileSize,
+                        width: tileSize * 3,
+                        height: tileSize,
+                        speed: -(0.8 + (diffLevel * 0.15)), // Faster
+                        color: '#3498db'
+                    });
+                }
+            }
+            
+            // Lane 3 - Fast cars moving right (increase count with level)
+            if (level > 2) { // Only add from level 3
+                const lane3Count = Math.min(diffLevel - 1, 4);
+                for (let i = 0; i < lane3Count; i++) {
+                    vehicles.push({
+                        x: i * (gameWidth / lane3Count) - tileSize * 2,
+                        y: 8 * tileSize,
+                        width: tileSize * 2,
+                        height: tileSize,
+                        speed: 1.0 + (diffLevel * 0.2),
+                        color: '#2ecc71'
+                    });
+                }
+            }
+            
+            // Lane 4 - New lane for levels 5+ (motorcycles - very fast)
+            if (level > 4) {
+                const lane4Count = Math.min(diffLevel - 3, 5);
+                for (let i = 0; i < lane4Count; i++) {
+                    vehicles.push({
+                        x: i * (gameWidth / lane4Count),
+                        y: 11 * tileSize,
+                        width: tileSize * 1.5,
+                        height: tileSize,
+                        speed: -(1.2 + (diffLevel * 0.25)),
+                        color: '#f39c12'
+                    });
+                }
+            }
+            
+            // Lane 5 - Special vehicles for levels 7+ (unpredictable movement)
+            if (level > 6) {
+                const lane5Count = Math.min(diffLevel - 5, 3);
+                for (let i = 0; i < lane5Count; i++) {
+                    vehicles.push({
+                        x: i * (gameWidth / lane5Count) - tileSize * 2,
+                        y: 12 * tileSize,
+                        width: tileSize * 2,
+                        height: tileSize,
+                        speed: 1.5 + (diffLevel * 0.2),
+                        color: '#9b59b6',
+                        erratic: true,
+                        erraticFactor: (diffLevel - 6) * 0.5
+                    });
+                }
+            }
+        }
+
+        // Create log objects for the river
+        function createLogs() {
+            logs = [];
+            
+            // Calculate difficulty factor (caps at level 8 for sanity)
+            const diffLevel = Math.min(level, 8);
+            
+            // Row 1 - Long logs moving right (many logs in level 1, fewer as levels progress)
+            const row1Count = Math.max(5 - Math.floor(diffLevel/2), 1);
+            for (let i = 0; i < row1Count; i++) {
+                logs.push({
+                    x: i * (gameWidth / row1Count),
+                    y: 6 * tileSize,
+                    width: tileSize * Math.max(5 - Math.floor(diffLevel/2), 1.5), // Logs get smaller as level increases
+                    height: tileSize,
+                    speed: 0.3 + (diffLevel * 0.1), // Speed increases with level
+                    color: '#8B4513'
+                });
+            }
+            
+            // Row 2 - Logs moving left (decreasing count with level)
+            const row2Count = Math.max(6 - Math.floor(diffLevel/2), 1);
+            for (let i = 0; i < row2Count; i++) {
+                logs.push({
+                    x: i * (gameWidth / row2Count),
+                    y: 5 * tileSize,
+                    width: tileSize * Math.max(3.5 - (diffLevel * 0.2), 1.5),
+                    height: tileSize,
+                    speed: -(0.4 + (diffLevel * 0.1)),
+                    color: '#8B4513'
+                });
+            }
+            
+            // Row 3 - Logs moving right (decreasing count with level)
+            const row3Count = Math.max(5 - Math.floor(diffLevel/2), 1);
+            for (let i = 0; i < row3Count; i++) {
+                logs.push({
+                    x: i * (gameWidth / row3Count),
+                    y: 4 * tileSize,
+                    width: tileSize * Math.max(3 - (diffLevel * 0.2), 1.5),
+                    height: tileSize,
+                    speed: 0.5 + (diffLevel * 0.1),
+                    color: '#8B4513'
+                });
+            }
+            
+            // Row 4 - Logs moving left (decreasing count with level)
+            const row4Count = Math.max(6 - Math.floor(diffLevel/2), 1);
+            for (let i = 0; i < row4Count; i++) {
+                logs.push({
+                    x: i * (gameWidth / row4Count),
+                    y: 3 * tileSize,
+                    width: tileSize * Math.max(2.5 - (diffLevel * 0.1), 1.5),
+                    height: tileSize,
+                    speed: -(0.6 + (diffLevel * 0.1)),
+                    color: '#8B4513'
+                });
+            }
+            
+            // Row 5 - Logs moving right (decreasing count with level)
+            const row5Count = Math.max(4 - Math.floor(diffLevel/2), 1);
+            for (let i = 0; i < row5Count; i++) {
+                logs.push({
+                    x: i * (gameWidth / row5Count),
+                    y: 2 * tileSize,
+                    width: tileSize * Math.max(2 - (diffLevel * 0.05), 1.5),
+                    height: tileSize,
+                    speed: 0.7 + (diffLevel * 0.1),
+                    color: '#8B4513'
+                });
+            }
+            
+            // For extreme levels (6-9), make logs move erratically
+            if (level > 5) {
+                logs.forEach(log => {
+                    // Add oscillation to higher level logs
+                    log.baseX = log.x;
+                    log.oscillation = (level - 5) * 0.5; // Increasing oscillation with level
+                    log.oscillationSpeed = 0.02 + ((level - 5) * 0.01);
+                    log.oscillationOffset = Math.random() * Math.PI * 2;
+                });
+            }
+        }
+
+        // Create coin objects for bonus points
+        function createCoins() {
+            coins = [];
+            
+            // Add coins in safe areas
+            const safeCoins = Math.min(2 + level, 5); // Fewer coins in lower levels
+            for (let i = 0; i < safeCoins; i++) {
+                const x = Math.floor(Math.random() * gridWidth) * tileSize;
+                const y = (Math.random() < 0.5 ? 7 : 14) * tileSize;
+                
+                coins.push({
+                    x: x,
+                    y: y,
+                    width: tileSize / 2,
+                    height: tileSize / 2,
+                    collected: false,
+                    sparkle: 0
+                });
+            }
+            
+            // Add coins on logs (only in higher levels)
+            if (level > 1) {
+                logs.forEach((log, index) => {
+                    if (index % (5 - level) === 0) { // More coins on logs as level increases
+                        coins.push({
+                            x: log.x + log.width / 2,
+                            y: log.y,
+                            width: tileSize / 2,
+                            height: tileSize / 2,
+                            collected: false,
+                            sparkle: 0,
+                            parentLog: log
+                        });
+                    }
+                });
+            }
+        }
+
+        // Spawn the frog at the starting position
+        function spawnFrog() {
+            frog = {
+                x: Math.floor(gridWidth / 2) * tileSize,
+                y: (gridHeight - 1) * tileSize,
+                width: tileSize,
+                height: tileSize,
+                onLog: null,
+                justMoved: false,
+                moveDelay: 0
+            };
+        }
+
+        // Main game loop
+        function gameLoop(timestamp) {
+            const deltaTime = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+            
+            if (gameRunning) {
+                update(deltaTime);
+                draw();
+            }
+            
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // Update game state
+        function update(deltaTime) {
+            if (frog.moveDelay > 0) {
+                frog.moveDelay -= deltaTime;
+            } else {
+                handleInput();
+            }
+            
+            // Reset frog's log association
+            frog.onLog = null;
+            
+            // Update vehicles
+            updateVehicles();
+            
+            // Update logs and check if frog is on a log
+            updateLogs();
+            
+            // Update coins and check collection
+            updateCoins();
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Check if frog reached the goal
+            checkGoal();
+        }
+
+        // Handle keyboard input
+        function handleInput() {
+            if (frog.moveDelay <= 0) {
+                if (keyState['ArrowUp'] || keyState['KeyW']) {
+                    moveFrog('up');
+                } else if (keyState['ArrowDown'] || keyState['KeyS']) {
+                    moveFrog('down');
+                } else if (keyState['ArrowLeft'] || keyState['KeyA']) {
+                    moveFrog('left');
+                } else if (keyState['ArrowRight'] || keyState['KeyD']) {
+                    moveFrog('right');
+                }
+            }
+        }
+
+        // Move frog in specified direction
+        function moveFrog(direction) {
+            const moveDistance = tileSize;
+            
+            switch (direction) {
+                case 'up':
+                    if (frog.y > 0) {
+                        frog.y -= moveDistance;
+                        score += 10;
+                        updateScoreAndLives();
+                    }
+                    break;
+                case 'down':
+                    if (frog.y < gameHeight - tileSize) {
+                        frog.y += moveDistance;
+                    }
+                    break;
+                case 'left':
+                    if (frog.x > 0) {
+                        frog.x -= moveDistance;
+                    }
+                    break;
+                case 'right':
+                    if (frog.x < gameWidth - tileSize) {
+                        frog.x += moveDistance;
+                    }
+                    break;
+            }
+            
+            frog.justMoved = true;
+            frog.moveDelay = 100; // Add a small delay between moves
+        }
+
+        // Update vehicles position and wrap around screen
+        function updateVehicles() {
+            vehicles.forEach(vehicle => {
+                // Basic movement
+                vehicle.x += vehicle.speed;
+                
+                // Add erratic movement for special vehicles
+                if (vehicle.erratic && Math.random() < 0.03) {
+                    // Random speed change
+                    const originalDirection = Math.sign(vehicle.speed);
+                    vehicle.speed = originalDirection * (Math.abs(vehicle.speed) + 
+                                   (Math.random() - 0.5) * vehicle.erraticFactor);
+                    
+                    // Ensure minimum speed
+                    if (Math.abs(vehicle.speed) < 0.5) {
+                        vehicle.speed = originalDirection * 0.5;
+                    }
+                    
+                    // Ensure maximum speed
+                    if (Math.abs(vehicle.speed) > 3) {
+                        vehicle.speed = originalDirection * 3;
+                    }
+                }
+                
+                // Wrap vehicles around the screen
+                if (vehicle.speed > 0 && vehicle.x > gameWidth) {
+                    vehicle.x = -vehicle.width;
+                } else if (vehicle.speed < 0 && vehicle.x + vehicle.width < 0) {
+                    vehicle.x = gameWidth;
+                }
+            });
+        }
+
+        // Update logs position and move frog with logs
+        function updateLogs() {
+            logs.forEach(log => {
+                // Basic movement
+                log.x += log.speed;
+                
+                // Add oscillation for higher levels
+                if (level > 5 && log.oscillation) {
+                    // Calculate oscillation effect
+                    const oscillationEffect = Math.sin(Date.now() * log.oscillationSpeed + log.oscillationOffset) * log.oscillation * tileSize;
+                    log.y += oscillationEffect * 0.01; // Very subtle vertical movement
+                    
+                    // For levels 8-9, add occasional quick movements
+                    if (level >= 8 && Math.random() < 0.01) {
+                        log.x += (Math.random() - 0.5) * tileSize * 0.5;
+                    }
+                }
+                
+                // Wrap logs around the screen
+                if (log.speed > 0 && log.x > gameWidth) {
+                    log.x = -log.width;
+                } else if (log.speed < 0 && log.x + log.width < 0) {
+                    log.x = gameWidth;
+                }
+                
+                // Check if frog is on this log
+                if (isOnLog(frog, log)) {
+                    frog.onLog = log;
+                    
+                    // Move frog with the log if it's not actively moving
+                    if (!frog.justMoved) {
+                        frog.x += log.speed;
+                        
+                        // Add oscillation effect to frog if on oscillating log
+                        if (level > 5 && log.oscillation) {
+                            const oscillationEffect = Math.sin(Date.now() * log.oscillationSpeed + log.oscillationOffset) * log.oscillation * tileSize;
+                            frog.x += oscillationEffect * 0.01;
+                        }
+                        
+                        // Keep frog within screen bounds
+                        if (frog.x < 0) {
+                            frog.x = 0;
+                        } else if (frog.x > gameWidth - frog.width) {
+                            frog.x = gameWidth - frog.width;
+                        }
+                    }
+                }
+            });
+            
+            // Reset frog's just moved flag
+            frog.justMoved = false;
+        }
+
+        // Update coins and handle collection
+        function updateCoins() {
+            coins.forEach(coin => {
+                // Update coin position if it's on a log
+                if (coin.parentLog) {
+                    coin.x = coin.parentLog.x + coin.parentLog.width / 2;
+                }
+                
+                // Update sparkle animation
+                coin.sparkle = (coin.sparkle + 1) % 60;
+                
+                // Check if frog collects coin
+                if (!coin.collected && intersects(frog, coin)) {
+                    coin.collected = true;
+                    score += 100;
+                    updateScoreAndLives();
+                }
+            });
+        }
+
+        // Check for collisions with vehicles and drowning
+        function checkCollisions() {
+            // Check vehicle collisions
+            let hitVehicle = vehicles.some(vehicle => intersects(frog, vehicle));
+            
+            // Check if frog is in the river and not on a log
+            let inRiver = false;
+            rivers.forEach(river => {
+                if (frog.y >= river.y && frog.y < river.y + river.height) {
+                    inRiver = true;
+                }
+            });
+            
+            let drowning = inRiver && !frog.onLog;
+            
+            // Handle death
+            if (hitVehicle || drowning) {
+                lives--;
+                updateScoreAndLives();
+                
+                if (lives > 0) {
+                    spawnFrog();
+                } else {
+                    gameOver();
+                }
+            }
+        }
+
+        // Check if frog reached the goal
+        function checkGoal() {
+            if (frog.y <= goal.y + goal.height) {
+                // Add bonus points (more for higher levels)
+                score += 500 + (level * 100);
+                updateScoreAndLives();
+                
+                // Increase level
+                level++;
+                
+                if (level > 9) {
+                    // Player won after completing 9 levels
+                    winGame();
+                } else {
+                    // Reset frog
+                    spawnFrog();
+                    
+                    // Create new vehicles and logs with increased speed
+                    createVehicles();
+                    createLogs();
+                    createCoins();
+                    
+                    // Show level up message
+                    showLevelMessage();
+                }
+            }
+        }
+        
+        // Show level up message
+        function showLevelMessage() {
+            const messageEl = document.getElementById('game-message');
+            const textEl = document.getElementById('message-text');
+            textEl.innerHTML = `LEVEL ${level}!`;
+            messageEl.style.display = 'block';
+            
+            // Hide message after 1.5 seconds
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 1500);
+        }
+        
+        // Win game
+        function winGame() {
+            gameRunning = false;
+            const messageEl = document.getElementById('game-message');
+            const textEl = document.getElementById('message-text');
+            textEl.innerHTML = `YOU WIN!<br>SCORE: ${score}<br>All 9 levels completed!`;
+            messageEl.style.display = 'block';
+        }
+
+        // Draw everything
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, gameWidth, gameHeight);
+            
+            // Draw background zones
+            drawBackground();
+            
+            // Draw vehicles
+            drawVehicles();
+            
+            // Draw logs
+            drawLogs();
+            
+            // Draw coins
+            drawCoins();
+            
+            // Draw frog
+            drawFrog();
+        }
+
+        // Draw background with zones
+        function drawBackground() {
+            // Draw grass background
+            ctx.fillStyle = colors.grass;
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
+            
+            // Draw goal area
+            ctx.fillStyle = colors.goal;
+            ctx.fillRect(0, goal.y, gameWidth, goal.height);
+            
+            // Draw flags in goal area
+            for (let i = 0; i < gridWidth; i += 2) {
+                ctx.fillStyle = i % 4 === 0 ? '#ffffff' : '#e74c3c';
+                ctx.fillRect(i * tileSize, 0, tileSize, tileSize);
+            }
+            
+            // Draw safe zones
+            safePlaces.forEach(safe => {
+                ctx.fillStyle = colors.safe;
+                ctx.fillRect(0, safe.y, gameWidth, safe.height);
+            });
+            
+            // Draw roads
+            roads.forEach(road => {
+                ctx.fillStyle = colors.road;
+                ctx.fillRect(0, road.y, gameWidth, road.height);
+                
+                // Draw road lines
+                ctx.fillStyle = colors.roadLine;
+                for (let y = road.y; y < road.y + road.height; y += tileSize) {
+                    for (let x = 0; x < gameWidth; x += tileSize * 2) {
+                        ctx.fillRect(x, y + tileSize / 2 - 2, tileSize, 4);
+                    }
+                }
+            });
+            
+            // Draw rivers
+            rivers.forEach(river => {
+                ctx.fillStyle = colors.river;
+                ctx.fillRect(0, river.y, gameWidth, river.height);
+                
+                // Draw water ripples
+                ctx.strokeStyle = '#4682B4';
+                ctx.lineWidth = 1;
+                
+                for (let y = river.y; y < river.y + river.height; y += tileSize / 2) {
+                    ctx.beginPath();
+                    for (let x = 0; x < gameWidth; x += tileSize) {
+                        ctx.moveTo(x, y);
+                        ctx.quadraticCurveTo(x + tileSize / 4, y - 5, x + tileSize / 2, y);
+                        ctx.quadraticCurveTo(x + (tileSize * 3) / 4, y + 5, x + tileSize, y);
+                    }
+                    ctx.stroke();
+                }
+            });
+        }
+
+        // Draw vehicles
+        function drawVehicles() {
+            vehicles.forEach(vehicle => {
+                // Draw vehicle body
+                ctx.fillStyle = vehicle.color;
+                ctx.fillRect(vehicle.x, vehicle.y, vehicle.width, vehicle.height);
+                
+                // Draw vehicle details
+                ctx.fillStyle = '#333333';
+                
+                // Windshield and wheels based on direction
+                if (vehicle.speed > 0) {
+                    // Moving right - windshield on right
+                    ctx.fillRect(vehicle.x + vehicle.width - tileSize / 2, 
+                                vehicle.y + tileSize / 4, 
+                                tileSize / 3, tileSize / 2);
+                } else {
+                    // Moving left - windshield on left
+                    ctx.fillRect(vehicle.x + tileSize / 6, 
+                                vehicle.y + tileSize / 4, 
+                                tileSize / 3, tileSize / 2);
+                }
+                
+                // Wheels
+                ctx.fillRect(vehicle.x + tileSize / 4, vehicle.y - 2, tileSize / 4, 2);
+                ctx.fillRect(vehicle.x + tileSize / 4, vehicle.y + vehicle.height, tileSize / 4, 2);
+                
+                ctx.fillRect(vehicle.x + vehicle.width - tileSize / 2, vehicle.y - 2, tileSize / 4, 2);
+                ctx.fillRect(vehicle.x + vehicle.width - tileSize / 2, vehicle.y + vehicle.height, tileSize / 4, 2);
+            });
+        }
+
+        // Draw logs
+        function drawLogs() {
+            logs.forEach(log => {
+                // Draw log base
+                ctx.fillStyle = log.color;
+                ctx.fillRect(log.x, log.y, log.width, log.height);
+                
+                // Draw log lines for texture
+                ctx.fillStyle = '#6B4226';
+                for (let i = 1; i < log.width / 10; i++) {
+                    ctx.fillRect(log.x + i * 10, log.y, 2, log.height);
+                }
+                
+                // Draw log ends - only if log is wide enough
+                if (log.width >= tileSize) {
+                    ctx.fillStyle = '#8B5A2B';
+                    const radius = Math.max(log.height / 2, 1); // Ensure positive radius
+                    
+                    ctx.beginPath();
+                    ctx.arc(log.x, log.y + log.height / 2, radius, Math.PI / 2, -Math.PI / 2, true);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(log.x + log.width, log.y + log.height / 2, radius, -Math.PI / 2, Math.PI / 2, true);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Draw coins
+        function drawCoins() {
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    // Create sparkle effect
+                    const sparkleSize = 1 + Math.sin(coin.sparkle * 0.1) * 2;
+                    
+                    // Draw coin
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.width / 2, coin.y + coin.height / 2, 
+                            coin.width / 2 + sparkleSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw coin inner detail
+                    ctx.fillStyle = '#FFA500';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.width / 2, coin.y + coin.height / 2, 
+                            coin.width / 4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        // Draw the frog
+        function drawFrog() {
+            // Draw frog body (green circle)
+            ctx.fillStyle = '#66CC33';
+            ctx.beginPath();
+            ctx.arc(frog.x + frog.width / 2, frog.y + frog.height / 2, 
+                    frog.width / 2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw frog eyes
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(frog.x + frog.width / 3, frog.y + frog.height / 3, 
+                    frog.width / 8, 0, Math.PI * 2);
+            ctx.arc(frog.x + (frog.width * 2) / 3, frog.y + frog.height / 3, 
+                    frog.width / 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw frog pupils
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(frog.x + frog.width / 3, frog.y + frog.height / 3, 
+                    frog.width / 16, 0, Math.PI * 2);
+            ctx.arc(frog.x + (frog.width * 2) / 3, frog.y + frog.height / 3, 
+                    frog.width / 16, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw frog mouth
+            ctx.strokeStyle = '#003300';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(frog.x + frog.width / 2, frog.y + (frog.height * 2) / 3, 
+                    frog.width / 4, 0, Math.PI);
+            ctx.stroke();
+        }
+
+        // Update score and lives display
+        function updateScoreAndLives() {
+            document.getElementById('score-lives').innerHTML = `SCORE: ${score} LIVES: ${lives} LEVEL: ${level}`;
+        }
+
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            const messageEl = document.getElementById('game-message');
+            const textEl = document.getElementById('message-text');
+            textEl.innerHTML = `GAME OVER<br>SCORE: ${score}<br>LEVEL: ${level}`;
+            messageEl.style.display = 'block';
+        }
+
+        // Restart game
+        function restartGame() {
+            cancelAnimationFrame(animationFrameId);
+            initGame();
+            lastTimestamp = 0;
+            gameLoop(0);
+        }
+
+        // Helper function to check if frog is on a log
+        function isOnLog(frog, log) {
+            return frog.x < log.x + log.width &&
+                   frog.x + frog.width > log.x &&
+                   frog.y === log.y;
+        }
+
+        // Helper function to check intersection between two objects
+        function intersects(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+    </script>
+</body>
+</html>
