@@ -1,168 +1,501 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>10-Day Beach Body Workout</title>
+    <style>
+        :root {
+            --app-background: #f5f5f7;
+            --card-background: #ffffff;
+            --primary-color: #0071e3;
+            --primary-hover: #0077ed;
+            --success-color: #34c759;
+            --text-color: #1d1d1f;
+            --secondary-text: #86868b;
+            --border-radius: 12px;
+            --button-radius: 20px;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "San Francisco", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            background-color: var(--app-background);
+            color: var(--text-color);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+        
+        .card {
+            background-color: var(--card-background);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+            background: linear-gradient(90deg, #0071e3, #2ecc71);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--button-radius);
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-outline:hover {
+            background-color: rgba(0, 113, 227, 0.1);
+        }
+        
+        .day-btn {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+        
+        .completed-check {
+            margin-left: 6px;
+            color: var(--success-color);
+        }
+        
+        .progress-container {
+            margin-bottom: 20px;
+        }
+        
+        .progress-label {
+            font-size: 15px;
+            color: var(--secondary-text);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: #e0e0e5;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+        
+        .exercise-card {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .exercise-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .exercise-text {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .timer {
+            font-size: 16px;
+            color: var(--secondary-text);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .btn-group .btn {
+            flex: 1;
+            min-width: 0;
+            padding: 12px 8px;
+        }
+        
+        .elapsed-time {
+            text-align: center;
+            font-size: 15px;
+            color: var(--secondary-text);
+        }
+        
+        .back-btn-container {
+            text-align: center;
+            margin-top: 24px;
+        }
+        
+        .round-indicator {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 14px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
 
-const workoutDays = Array.from({ length: 10 }, (_, i) => ({
-  day: i + 1,
-  sections: [
-    { title: "Pushup Circuit (3 Rounds)", exercises: [
-      { text: "Diamond Pushups – 10–15 reps" },
-      { text: "Explosive Pushups – 8–10 reps" },
-      { text: "Slow Negative Pushups – 5 reps (5–8 sec down)", time: 60 },
-      { text: "Wide Pushups – 12 reps" },
-    ], rest: 60, rounds: 3 },
-    { title: "Arms Finisher (2–3 Rounds)", exercises: [
-      { text: "Triceps Dips (Chair or Bench) – 12–15 reps" },
-      { text: "Close-Grip Pushups – 10–12 reps" },
-      { text: "Isometric Bicep Hold (Towel/Band) – 30 sec", time: 30 },
-    ], rest: 45, rounds: 2 },
-    { title: "Abs & Obliques Circuit (3 Rounds)", exercises: [
-      { text: "Bicycle Crunches – 20 reps" },
-      { text: "Russian Twists – 20 reps (10 each side)" },
-      { text: "Leg Raises / Reverse Crunches – 15 reps" },
-      { text: "Side Plank with Hip Dips – 30 sec each side", time: 60 },
-      { text: "V-Ups – 12–15 reps" },
-    ], rest: 60, rounds: 3 },
-  ]
-}));
-
-export default function WorkoutApp() {
-  const [selectedDay, setSelectedDay] = useState(null);
-  const [currentSection, setCurrentSection] = useState(0);
-  const [currentExercise, setCurrentExercise] = useState(0);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  const [elapsedTime, setElapsedTime] = useState(0);
-  const [completedDays, setCompletedDays] = useState([]);
-
-  const currentDay = selectedDay != null ? workoutDays[selectedDay] : null;
-  const section = currentDay?.sections[currentSection];
-  const exercise = section?.exercises[currentExercise];
-  const totalWorkoutSteps = currentDay?.sections.reduce((total, sec) => total + (sec.exercises.length * sec.rounds), 0);
-  const stepsDone = currentDay?.sections.slice(0, currentSection).reduce((total, sec) => total + sec.exercises.length * sec.rounds, 0) + ((currentRound - 1) * section?.exercises.length + currentExercise);
-  const currentProgress = Math.floor((stepsDone / totalWorkoutSteps) * 100);
-
-  useEffect(() => {
-    let timer;
-    if (isRunning && timeLeft > 0) {
-      timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [isRunning, timeLeft]);
-
-  useEffect(() => {
-    if (exercise?.time) {
-      setTimeLeft(exercise.time);
-    } else {
-      setTimeLeft(0);
-    }
-  }, [currentExercise, currentSection, currentRound]);
-
-  const startWorkout = () => {
-    setIsRunning(true);
-    setStartTime(Date.now());
-  };
-
-  const stopWorkout = () => {
-    setIsRunning(false);
-    setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
-  };
-
-  const nextExercise = () => {
-    if (currentExercise < section.exercises.length - 1) {
-      setCurrentExercise(currentExercise + 1);
-    } else if (currentRound < section.rounds) {
-      setCurrentRound(currentRound + 1);
-      setCurrentExercise(0);
-    } else if (currentSection < currentDay.sections.length - 1) {
-      setCurrentSection(currentSection + 1);
-      setCurrentExercise(0);
-      setCurrentRound(1);
-    } else {
-      const updated = [...completedDays, selectedDay];
-      setCompletedDays(updated);
-      stopWorkout();
-    }
-  };
-
-  const prevExercise = () => {
-    if (currentExercise > 0) {
-      setCurrentExercise(currentExercise - 1);
-    } else if (currentRound > 1) {
-      setCurrentRound(currentRound - 1);
-      setCurrentExercise(section.exercises.length - 1);
-    } else if (currentSection > 0) {
-      const prevSection = currentDay.sections[currentSection - 1];
-      setCurrentSection(currentSection - 1);
-      setCurrentExercise(prevSection.exercises.length - 1);
-      setCurrentRound(prevSection.rounds);
-    }
-  };
-
-  const isLastStep = currentSection === currentDay?.sections.length - 1 &&
-                     currentExercise === section?.exercises.length - 1 &&
-                     currentRound === section?.rounds;
-
-  if (selectedDay == null) {
-    return (
-      <div className="max-w-xl mx-auto p-4">
-        <h1 className="text-2xl font-bold mb-4 text-center">10-Day Beach Body Workout</h1>
-        <div className="grid grid-cols-2 gap-4">
-          {workoutDays.map((day, idx) => (
-            <Button
-              key={idx}
-              className="w-full"
-              onClick={() => {
-                setSelectedDay(idx);
-                setCurrentSection(0);
-                setCurrentExercise(0);
-                setCurrentRound(1);
-                setElapsedTime(0);
-                setIsRunning(false);
-              }}
-            >
-              Day {day.day} {completedDays.includes(idx) ? "✅" : ""}
-            </Button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-xl mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4 text-center">Day {selectedDay + 1} Workout</h1>
-
-      <div className="mb-4">
-        <p className="text-sm text-center mb-1">Workout Progress</p>
-        <div className="w-full bg-gray-200 rounded-full h-2.5">
-          <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${currentProgress}%` }}></div>
-        </div>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">{section.title} (Round {currentRound}/{section.rounds})</h2>
-        <p className="text-lg mb-2">Current: {exercise.text}</p>
-        {exercise.time && <p className="text-sm">Time left: {timeLeft}s</p>}
-      </div>
-
-      <div className="flex gap-2 mb-4">
-        <Button onClick={startWorkout} disabled={isRunning}>Start</Button>
-        <Button onClick={stopWorkout} disabled={!isRunning}>Stop</Button>
-        <Button onClick={prevExercise} disabled={currentSection === 0 && currentRound === 1 && currentExercise === 0}>Previous</Button>
-        <Button onClick={nextExercise}>{isLastStep ? "Finish" : "Next"}</Button>
-      </div>
-
-      <div className="text-center text-sm text-gray-500">
-        Elapsed Time: {elapsedTime}s
-      </div>
-
-      <div className="mt-6 text-center">
-        <Button variant="outline" onClick={() => setSelectedDay(null)}>
-          Back to Days
-        </Button>
-      </div>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --app-background: #1a1a1a;
+                --card-background: #2c2c2e;
+                --text-color: #f5f5f7;
+                --secondary-text: #adadb1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="app"></div>
     </div>
-  );
-}
+    
+    <script>
+        // Workout data
+        const workoutDays = Array.from({ length: 10 }, (_, i) => ({
+            day: i + 1,
+            sections: [
+                { 
+                    title: "Pushup Circuit (3 Rounds)", 
+                    exercises: [
+                        { text: "Diamond Pushups – 10–15 reps" },
+                        { text: "Explosive Pushups – 8–10 reps" },
+                        { text: "Slow Negative Pushups – 5 reps (5–8 sec down)", time: 60 },
+                        { text: "Wide Pushups – 12 reps" },
+                    ], 
+                    rest: 60, 
+                    rounds: 3 
+                },
+                { 
+                    title: "Arms Finisher (2–3 Rounds)", 
+                    exercises: [
+                        { text: "Triceps Dips (Chair or Bench) – 12–15 reps" },
+                        { text: "Close-Grip Pushups – 10–12 reps" },
+                        { text: "Isometric Bicep Hold (Towel/Band) – 30 sec", time: 30 },
+                    ], 
+                    rest: 45, 
+                    rounds: 2 
+                },
+                { 
+                    title: "Abs & Obliques Circuit (3 Rounds)", 
+                    exercises: [
+                        { text: "Bicycle Crunches – 20 reps" },
+                        { text: "Russian Twists – 20 reps (10 each side)" },
+                        { text: "Leg Raises / Reverse Crunches – 15 reps" },
+                        { text: "Side Plank with Hip Dips – 30 sec each side", time: 60 },
+                        { text: "V-Ups – 12–15 reps" },
+                    ], 
+                    rest: 60, 
+                    rounds: 3 
+                },
+            ]
+        }));
+
+        // App state
+        let state = {
+            selectedDay: null,
+            currentSection: 0,
+            currentExercise: 0,
+            currentRound: 1,
+            timeLeft: 0,
+            isRunning: false,
+            startTime: null,
+            elapsedTime: 0,
+            completedDays: [],
+            timer: null
+        };
+
+        // DOM References
+        const app = document.getElementById('app');
+
+        // Render functions
+        function renderDaySelection() {
+            let html = `
+                <div class="card">
+                    <h1>10-Day Beach Body Workout</h1>
+                    <div class="days-grid">
+                        ${workoutDays.map((day, idx) => `
+                            <button class="btn day-btn" onclick="selectDay(${idx})">
+                                Day ${day.day} ${state.completedDays.includes(idx) ? '<span class="completed-check">✓</span>' : ''}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            app.innerHTML = html;
+        }
+
+        function renderWorkout() {
+            const currentDay = state.selectedDay != null ? workoutDays[state.selectedDay] : null;
+            if (!currentDay) return;
+
+            const section = currentDay.sections[state.currentSection];
+            const exercise = section.exercises[state.currentExercise];
+            
+            // Calculate progress
+            const totalWorkoutSteps = currentDay.sections.reduce((total, sec) => total + (sec.exercises.length * sec.rounds), 0);
+            const stepsDone = currentDay.sections.slice(0, state.currentSection).reduce((total, sec) => total + sec.exercises.length * sec.rounds, 0) + 
+                              ((state.currentRound - 1) * section.exercises.length + state.currentExercise);
+            const currentProgress = Math.floor((stepsDone / totalWorkoutSteps) * 100);
+            
+            // Check if this is the last step
+            const isLastStep = state.currentSection === currentDay.sections.length - 1 &&
+                           state.currentExercise === section.exercises.length - 1 &&
+                           state.currentRound === section.rounds;
+
+            let html = `
+                <div class="card">
+                    <h1>Day ${state.selectedDay + 1} Workout</h1>
+                    
+                    <div class="progress-container">
+                        <div class="progress-label">Workout Progress</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${currentProgress}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="exercise-card">
+                        <div class="exercise-title">
+                            ${section.title} <span class="round-indicator">Round ${state.currentRound}/${section.rounds}</span>
+                        </div>
+                        <div class="exercise-text">Current: ${exercise.text}</div>
+                        ${exercise.time ? `<div class="timer">Time left: ${state.timeLeft}s</div>` : ''}
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn" onclick="startWorkout()" ${state.isRunning ? 'disabled' : ''}>Start</button>
+                        <button class="btn" onclick="stopWorkout()" ${!state.isRunning ? 'disabled' : ''}>Stop</button>
+                        <button class="btn" onclick="prevExercise()" ${state.currentSection === 0 && state.currentRound === 1 && state.currentExercise === 0 ? 'disabled' : ''}>Previous</button>
+                        <button class="btn" onclick="nextExercise()">${isLastStep ? 'Finish' : 'Next'}</button>
+                    </div>
+                    
+                    <div class="elapsed-time">
+                        Elapsed Time: ${state.elapsedTime}s
+                    </div>
+                    
+                    <div class="back-btn-container">
+                        <button class="btn btn-outline" onclick="backToDays()">Back to Days</button>
+                    </div>
+                </div>
+            `;
+            
+            app.innerHTML = html;
+        }
+
+        // Event handlers
+        function selectDay(index) {
+            state.selectedDay = index;
+            state.currentSection = 0;
+            state.currentExercise = 0;
+            state.currentRound = 1;
+            state.elapsedTime = 0;
+            state.isRunning = false;
+            renderWorkout();
+        }
+
+        function startWorkout() {
+            state.isRunning = true;
+            if (!state.startTime) {
+                state.startTime = Date.now();
+            }
+            
+            // Start timer if exercise has a time
+            const currentDay = workoutDays[state.selectedDay];
+            const section = currentDay.sections[state.currentSection];
+            const exercise = section.exercises[state.currentExercise];
+            
+            if (exercise.time && state.timeLeft > 0) {
+                startTimer();
+            }
+            
+            renderWorkout();
+        }
+
+        function stopWorkout() {
+            state.isRunning = false;
+            clearInterval(state.timer);
+            state.timer = null;
+            state.elapsedTime = Math.floor((Date.now() - state.startTime) / 1000);
+            renderWorkout();
+        }
+
+        function nextExercise() {
+            clearInterval(state.timer);
+            state.timer = null;
+            
+            const currentDay = workoutDays[state.selectedDay];
+            const section = currentDay.sections[state.currentSection];
+            
+            if (state.currentExercise < section.exercises.length - 1) {
+                state.currentExercise++;
+            } else if (state.currentRound < section.rounds) {
+                state.currentRound++;
+                state.currentExercise = 0;
+            } else if (state.currentSection < currentDay.sections.length - 1) {
+                state.currentSection++;
+                state.currentExercise = 0;
+                state.currentRound = 1;
+            } else {
+                if (!state.completedDays.includes(state.selectedDay)) {
+                    state.completedDays.push(state.selectedDay);
+                }
+                stopWorkout();
+                backToDays();
+                return;
+            }
+            
+            // Set time for new exercise if it has a timer
+            const newExercise = currentDay.sections[state.currentSection].exercises[state.currentExercise];
+            if (newExercise.time) {
+                state.timeLeft = newExercise.time;
+                if (state.isRunning) {
+                    startTimer();
+                }
+            } else {
+                state.timeLeft = 0;
+            }
+            
+            renderWorkout();
+        }
+
+        function prevExercise() {
+            clearInterval(state.timer);
+            state.timer = null;
+            
+            const currentDay = workoutDays[state.selectedDay];
+            
+            if (state.currentExercise > 0) {
+                state.currentExercise--;
+            } else if (state.currentRound > 1) {
+                state.currentRound--;
+                const section = currentDay.sections[state.currentSection];
+                state.currentExercise = section.exercises.length - 1;
+            } else if (state.currentSection > 0) {
+                state.currentSection--;
+                const prevSection = currentDay.sections[state.currentSection];
+                state.currentExercise = prevSection.exercises.length - 1;
+                state.currentRound = prevSection.rounds;
+            } else {
+                return; // Already at the beginning
+            }
+            
+            // Set time for new exercise if it has a timer
+            const newExercise = currentDay.sections[state.currentSection].exercises[state.currentExercise];
+            if (newExercise.time) {
+                state.timeLeft = newExercise.time;
+                if (state.isRunning) {
+                    startTimer();
+                }
+            } else {
+                state.timeLeft = 0;
+            }
+            
+            renderWorkout();
+        }
+
+        function backToDays() {
+            clearInterval(state.timer);
+            state.timer = null;
+            state.selectedDay = null;
+            renderDaySelection();
+        }
+
+        function startTimer() {
+            clearInterval(state.timer);
+            state.timer = setInterval(() => {
+                if (state.timeLeft > 0) {
+                    state.timeLeft--;
+                    // Update only the timer display for efficiency
+                    const timerElement = document.querySelector('.timer');
+                    if (timerElement) {
+                        timerElement.textContent = `Time left: ${state.timeLeft}s`;
+                    }
+                    
+                    if (state.timeLeft === 0) {
+                        clearInterval(state.timer);
+                    }
+                } else {
+                    clearInterval(state.timer);
+                }
+            }, 1000);
+        }
+
+        // Initial render
+        renderDaySelection();
+
+        // Update elapsed time if workout is running
+        setInterval(() => {
+            if (state.isRunning && state.startTime) {
+                state.elapsedTime = Math.floor((Date.now() - state.startTime) / 1000);
+                const elapsedTimeElement = document.querySelector('.elapsed-time');
+                if (elapsedTimeElement) {
+                    elapsedTimeElement.textContent = `Elapsed Time: ${state.elapsedTime}s`;
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
