@@ -317,9 +317,11 @@
             const containerWidth = container.clientWidth;
             const containerHeight = container.clientHeight;
             
-            // Calculate the block size
+            // Calculate the block size with more precise height calculation
             const maxBlockWidth = (containerWidth - 40) / COLS;
-            const maxBlockHeight = (containerHeight - 150) / ROWS; // Adjust for top panel
+            const maxBlockHeight = (containerHeight - 200) / ROWS; // Increased from 150 to 200 to account for all UI elements
+            
+            // Ensure we don't exceed the container height
             BLOCK_SIZE = Math.floor(Math.min(maxBlockWidth, maxBlockHeight));
             
             // Set main canvas dimensions
@@ -331,6 +333,10 @@
             document.body.style.justifyContent = "center";
             document.body.style.alignItems = "center";
             container.style.margin = "0 auto";
+            
+            // Ensure the game container doesn't exceed viewport height
+            container.style.maxHeight = "100vh";
+            container.style.overflow = "hidden";
         }
 
         // Create a new game board

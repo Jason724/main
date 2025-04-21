@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Super Mario Jump</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+            font-family: 'Arial', sans-serif;
+            background-color: #87CEEB;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            touch-action: manipulation;
+        }
+        #instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            font-size: 18px;
+            max-width: 80%;
+        }
+        #level-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 10;
+            font-size: 16px;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+        #level-complete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 100;
+            display: none;
+        }
+        button {
+            background-color: #E52521;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #FF4500;
+        }
+        #start-button {
+            background-color: #E52521;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin-top: 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        #start-button:hover {
+            background-color: #FF4500;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="level-info">Level: 1/6</div>
+        <div id="instructions">
+            <h2>Super Mario Jump</h2>
+            <p>Tap the screen or press SPACE to jump</p>
+            <p>Avoid enemies and reach the flag!</p>
+            <button id="start-button">Start Game</button>
+        </div>
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <p>Oh no! Mario fell or hit an enemy.</p>
+            <button id="restart-button">Try Again</button>
+        </div>
+        <div id="level-complete">
+            <h2>Level Complete!</h2>
+            <p id="level-message">You reached the flag!</p>
+            <button id="next-level-button">Next Level</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let canvas, ctx;
+        let gameRunning = false;
+        let gameWidth, gameHeight;
+        let currentLevel = 1;
+        const TOTAL_LEVELS = 6;
+        
+        // Character variables
+        let mario = {
+            x: 50,
+            y: 0,
+            width: 40,
+            height: 60,
+            velocityY: 0,
+            velocityX: 0,
+            isJumping: false,
+            gravity: 0.8,
+            jumpPower: -15,
+            speed: 8,
+            maxSpeed: 12
+        };
+        
+        // Environment variables
+        let ground = {
+            y: 0,
+            height: 50
+        };
+        
+        let obstacles = [];
+        let coins = [];
+        let flagpole = {};
+        let backgrounds = [];
+        let score = 0;
+        
+        // Images
+        const marioImg = new Image();
+        marioImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QjU0RUNFMTA3OTFDMTFFQTk4RkJFMUJBQjI5RjI1MTQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QjU0RUNFMTE3OTFDMTFFQTk4RkJFMUJBQjI5RjI1MTQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpCNTRFQ0UwRTc5MUMxMUVBOThGQkUxQkFCMjlGMjUxNCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpCNTRFQ0UwRjc5MUMxMUVBOThGQkUxQkFCMjlGMjUxNCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PkaTz9wAAAGAUExURf/MAP+ZAADMmQDMzP8AAAAAAMyZAMzMzP//AJmZmWYAAAAA/wAAmf+ZmQAAZv8AmcwAAP8AzADMAAAzmTMAAP8zzMxmAGZmZgAzAP/MzMzMmQBmZgBmmQBmM8wAzAAzZv/MmQCZzP9mmQAAMzMzADMzM5kAAJnMzGaZzDOZmWYzmf//zJkAZv9mzDOZM/+ZzDMAM5nMmQD/zABmzDMzZgAzM8xmZmaZZgCZZmaZM2ZmAGZmM/8zzP9m/2YAZpnMmcyZzDMAzAAA/wDM/2YzAJlmADPMmcwzAP+Z/wD/ZgCZmWaZAP/MAABmmJkAzGZm/5n/mTOZzMzM//9m/5lmmcz/zMzM/wCZM2YA//9mmDMAmZlmZpkzAMz/mZnM//8z/8yZAMwAmcyZmTNmMwAzmbIaUYEAAAGzSURBVHja7JNnc8IwDIbFLSQQRtl7NXsUSEJCW7qT7r3T//9POlmGtunHXnfnL7KfR9LrARKtAv6fFwnsS/CDA7XKWxGYF4TZYkDikXTgJJLKPeJJlQAiSWUVT8WTpLJbBJBsY7bAR9mVXJusf/fR4jh1UXZJRzKdLvDUZNxlRF9rS2pnWdOQfaXlyZvvF+qPp3I0mZIp/QFJT5azrS5d03UaBw+XUXMYGddEaRxM0Yil9GIwO9fEUW8xfL7K8fCxBGJQAz9m9P7Sw/ORqCwPrkhqsrY0LBry3JZ0E5aB7MNkIJGJBtxNlspBFLagIpW7ZSAkBJzM2gX3xyMHdYgDlVSBmJAQvkIBMpMFwkLMkN9EKFCCGAi7GOWvvn+4+14FkdP7YdKAjIbQe+yeCkQmYsKgUPPIQV1c8PaJ4qA44qF2FRfaFhKBsO8CChHOKa5XLsEZ3ULcZwIyYLuC2fP6OlMGg4NsOSbG2kRloP3lFBd3aEAcN5yqO+yPpG3fSOaYDacsILVdh+HMcNZsNp3Z4YzTFIAT7SXAAEV2qbpUDK4JAAAAAElFTkSuQmCC';
+        
+        const goombaImg = new Image();
+        goombaImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyZpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuNi1jMTQ1IDc5LjE2MzQ5OSwgMjAxOC8wOC8xMy0xNjo0MDoyMiAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjEyMTU0RjIxNzkxRDExRUE5REQ5OEIxQTU5RjM0QkJGIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjEyMTU0RjIyNzkxRDExRUE5REQ5OEIxQTU5RjM0QkJGIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MTIxNTRGMUY3OTFEMTFFQTlERDk4QjFBNTlGMzRCQkYiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MTIxNTRGMjA3OTFEMTFFQTlERDk4QjFBNTlGMzRCQkYiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7cJBfNAAABgFBMVEWxUxW3UxW2URPXdDDXdDG1UBLVcSvUcS62UhT///+4VBa2UROvUxXVci2zUBLWdDDVci7XczC5VRfObyy0UhTVcSzXdTHWdDC3UxTXdC+8WBq+Whu6VhjTcCvBXB7ScCvXczHCXR/Wcy/OaiXUcCq9WRrRbijDXiDFYCG6VhfCXB7Wcy7KZiPLZyTOayXBWxzTbynGYSLLZiPRbSfOaiTFXyDMaCTNaSTPbCbQbCbIYyLPbCXHYiK/WRvMZyO1UhXGYCLRbynDXR/IYiPRbijCXB3JZCPSbynTbyjKZSLQbCXJYyO+WRrUcCvMaCPFXyHScCrScSvEXiDNaiTJYyK5VRa7WBnLZiLObCa/Wxzday7IYiK7Vxi4VRa5VBXebC7BZSDCZR65VRXSbyjHYSHPayXOayS0URO2UhO8WBiyUROzURO7Vxi0UBK1UBK3UhS8WRnTcSu2URSzUBK1UBHAWxzAXBzWdC+6Vhe+WRrGYSG9WRnUcizYdTG9WBn////TDcFPAAAAgHRSTlP/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////ADgFS2cAAAF+SURBVHjahNPnUwJBEAbwJV1ERUoQJHQQAgI2UGzYGwgIouTAxl5jb//+7mZc47Fz63vH/fZ5d3b2DnLNz0FV+oeHZKwjK2MlJaUs45wh2GqTZYesrbNV1sHgxqYQwlptRZwJbG0LISwtE5z4zu7efl92UwLFAYcjUHRXANzevdJP3/sPDo+OT05Pws6cuzMWQMR9dn5RvIxcXUfiN8y6YFUBCN3kk6lUMp+7TSQfMrHo8wuz4asCNN/L+5R6GqrGnmOxWk36eeALgP3Z+SbP5xZ1nv+lkj8KILywBH4VNP/LL5VfBfUauF/W1+ufXw1U+lV9DfyvGjD7VH0N/DqQfa++Bv4AYOGV4DOogr8K0Dapz3J8YglIKujywCqLCvr7qrVN6g+GhheLkRqeDoxQ43jKNwmzvhk7AHZXp01n0+manp71LuxmMnRNQS4Oi5cvgjx8dkY1eSMTSQlE7DF3M/ZGsZvpDpfLjRW4EJvoJSQ9Nqbd40fKOQejAMeRXTlqYlLTAAAAAElFTkSuQmCC';
+        
+        const coinImg = new Image();
+        coinImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABtQTFRF/9YA/80A/8QA/7sA/8kA/60A/9EA/6YA////Ocz6LwAAAEFJREFUeNpiYGRkYmZhZWPn4OTi5uHl4xcQFBIWERUTl5CUkpaRlZNXUFRSVlFVU9fQ1NLW0dXTNzA0MjYxBQgwABIYAQkeorg9AAAAAElFTkSuQmCC';
+        
+        const flagImg = new Image();
+        flagImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAkCAMAAACrz5QdAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADBQTFRFAAAADDkMJ2QnGFAYMmwyCTQJEj4SO3M7NFw0IFggLWgtP3c/P3c/P3c/////P3c/p8T8tAAAABB0Uk5T////////////////////AOAjXRkAAABcSURBVHjarNFBDsAgCEVRKoio9P6n7UwWpq3Ghb7kL8hLwpLZcw2XNiuHxI4K5rDswauwphIEKQGErIBSFQhTIGVPGI9QLhDqGcoeOQCd9wdaZ9AC0Mj/hfoIMAD5YQOMbZ7lzQAAAABJRU5ErkJggg==';
+        
+        const pipeImg = new Image();
+        pipeImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAMAAAAM7l6QAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAADBQTFRFADQADywQGSIcIlosOmE8KU0sO2I+AzUDLD8uKjksLT8vO2E9PGI+PGM+////PGM+HTR7dwAAABB0Uk5T////////////////////AOAjXRkAAABtSURBVHja7NFBCoAwDEXRpFptO73/ca0TodSBO3F+eMzioS1lEIDMiTlYCLIIFmGmwXTYTYMdQ6D1YRyGQ80V6H7Y3oc8f8J9hX0J2zvwKGDDhf0XJPELIkqRpLiSLVrJuI4OteQYXM3xEmAAU1wCHB7+bK4AAAAASUVORK5CYII=';
+        
+        // Initialize the game
+        function init() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size to match window
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Initialize event listeners
+            initEventListeners();
+            
+            // Draw initial game state
+            draw();
+            
+            // Add start button listener
+            const startButton = document.getElementById('start-button');
+            if (startButton) {
+                startButton.addEventListener('click', function() {
+                    console.log('Start button clicked');
+                    document.getElementById('instructions').style.display = 'none';
+                    resetGame();
+                });
+            }
+        }
+        
+        function initEventListeners() {
+            // Jump controls
+            window.addEventListener('keydown', function(e) {
+                if (e.code === 'Space' && gameRunning) {
+                    jump();
+                }
+            });
+            
+            canvas.addEventListener('click', function() {
+                if (gameRunning) {
+                    jump();
+                }
+            });
+            
+            // Movement controls
+            window.addEventListener('keydown', function(e) {
+                if (!gameRunning) return;
+                
+                switch(e.code) {
+                    case 'ArrowLeft':
+                        mario.velocityX = -mario.speed;
+                        break;
+                    case 'ArrowRight':
+                        mario.velocityX = mario.speed;
+                        break;
+                }
+            });
+            
+            window.addEventListener('keyup', function(e) {
+                if (!gameRunning) return;
+                
+                if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+                    mario.velocityX = 0;
+                }
+            });
+            
+            document.getElementById('restart-button').addEventListener('click', function() {
+                document.getElementById('game-over').style.display = 'none';
+                resetGame();
+            });
+            
+            document.getElementById('next-level-button').addEventListener('click', function() {
+                document.getElementById('level-complete').style.display = 'none';
+                if (currentLevel < TOTAL_LEVELS) {
+                    currentLevel++;
+                    initLevel(currentLevel);
+                } else {
+                    // Game complete
+                    document.getElementById('level-message').textContent = 'Congratulations! You completed all levels!';
+                    document.getElementById('next-level-button').textContent = 'Play Again';
+                    document.getElementById('level-complete').style.display = 'block';
+                    document.getElementById('next-level-button').addEventListener('click', function() {
+                        currentLevel = 1;
+                        initLevel(currentLevel);
+                    }, { once: true });
+                }
+            });
+        }
+        
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            document.getElementById('game-over').style.display = 'block';
+        }
+        
+        function levelComplete() {
+            gameRunning = false;
+            document.getElementById('level-complete').style.display = 'block';
+        }
+        
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, gameWidth, gameHeight);
+            
+            // Draw sky background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, gameWidth, gameHeight);
+            
+            // Draw ground
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, ground.y, gameWidth, ground.height);
+            
+            // Draw grass on top of ground
+            ctx.fillStyle = '#2E8B57';
+            ctx.fillRect(0, ground.y, gameWidth, 10);
+            
+            // Draw mario (red rectangle)
+            ctx.fillStyle = '#E52521';
+            ctx.fillRect(mario.x, mario.y, mario.width, mario.height);
+            
+            // Draw obstacles
+            for (let obstacle of obstacles) {
+                if (obstacle.type === 'goomba') {
+                    // Draw goomba (brown rectangle)
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                } else if (obstacle.type === 'pipe') {
+                    // Draw pipe (green rectangle)
+                    ctx.fillStyle = '#2E8B57';
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                }
+            }
+            
+            // Draw coins
+            for (let coin of coins) {
+                if (!coin.collected) {
+                    // Draw coin (yellow circle)
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(coin.x + coin.width/2, coin.y + coin.height/2, coin.width/2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Draw flagpole
+            // Pole
+            ctx.fillStyle = '#808080';
+            ctx.fillRect(flagpole.x, flagpole.y, 5, flagpole.height);
+            // Flag
+            ctx.fillStyle = '#E52521';
+            ctx.beginPath();
+            ctx.moveTo(flagpole.x + 5, flagpole.y);
+            ctx.lineTo(flagpole.x + 25, flagpole.y + 10);
+            ctx.lineTo(flagpole.x + 5, flagpole.y + 20);
+            ctx.fill();
+            
+            // Draw score
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 20, 30);
+        }
+        
+        function gameLoop() {
+            if (!gameRunning) {
+                console.log('Game not running');
+                return;
+            }
+            
+            update();
+            draw();
+            
+            // Continue the game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize the game when all assets are loaded
+        window.onload = function() {
+            init();
+        };
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            gameWidth = canvas.width;
+            gameHeight = canvas.height;
+            
+            // Adjust ground height based on canvas size
+            ground.y = gameHeight - ground.height;
+            
+            // Place mario on the ground
+            mario.y = ground.y - mario.height;
+        }
+        
+        function resetGame() {
+            console.log('Resetting game');
+            gameRunning = true;
+            score = 0;
+            currentLevel = 1;
+            initLevel(currentLevel);
+            gameLoop(); // Start the game loop
+        }
+        
+        function initLevel(level) {
+            console.log('Initializing level:', level);
+            // Update level display
+            document.getElementById('level-info').textContent = `Level: ${level}/${TOTAL_LEVELS}`;
+            
+            // Reset mario position
+            mario.x = 50;
+            mario.y = ground.y - mario.height;
+            mario.velocityY = 0;
+            mario.isJumping = false;
+            
+            // Clear arrays
+            obstacles = [];
+            coins = [];
+            
+            // Set level difficulty
+            let obstacleCount, coinCount, flagDistance;
+            
+            switch(level) {
+                case 1:
+                    obstacleCount = 3;
+                    coinCount = 5;
+                    flagDistance = gameWidth * 1.5;
+                    mario.speed = 5;
+                    break;
+                case 2:
+                    obstacleCount = 5;
+                    coinCount = 7;
+                    flagDistance = gameWidth * 2;
+                    mario.speed = 5.5;
+                    break;
+                case 3:
+                    obstacleCount = 7;
+                    coinCount = 10;
+                    flagDistance = gameWidth * 2.5;
+                    mario.speed = 6;
+                    break;
+                case 4:
+                    obstacleCount = 10;
+                    coinCount = 12;
+                    flagDistance = gameWidth * 3;
+                    mario.speed = 6.5;
+                    break;
+                case 5:
+                    obstacleCount = 12;
+                    coinCount = 15;
+                    flagDistance = gameWidth * 3.5;
+                    mario.speed = 7;
+                    break;
+                case 6:
+                    obstacleCount = 15;
+                    coinCount = 20;
+                    flagDistance = gameWidth * 4;
+                    mario.speed = 8;
+                    break;
+                default:
+                    obstacleCount = 3;
+                    coinCount = 5;
+                    flagDistance = gameWidth * 1.5;
+                    mario.speed = 5;
+            }
+            
+            // Generate obstacles
+            for (let i = 0; i < obstacleCount; i++) {
+                let minDistance = gameWidth * 0.3;
+                let xPos = minDistance + Math.random() * (flagDistance - minDistance - 100);
+                
+                let type = Math.random() < 0.7 ? 'goomba' : 'pipe';
+                
+                if (type === 'goomba') {
+                    obstacles.push({
+                        x: xPos,
+                        y: ground.y - 30,
+                        width: 30,
+                        height: 30,
+                        type: type,
+                        velocityX: -1 - Math.random() * (level - 1)
+                    });
+                } else {
+                    obstacles.push({
+                        x: xPos,
+                        y: ground.y - 50,
+                        width: 40,
+                        height: 50,
+                        type: type,
+                        velocityX: 0
+                    });
+                }
+            }
+            
+            // Generate coins
+            for (let i = 0; i < coinCount; i++) {
+                let minDistance = gameWidth * 0.2;
+                let xPos = minDistance + Math.random() * (flagDistance - minDistance - 50);
+                let yPos = ground.y - 40 - Math.random() * 100;
+                
+                coins.push({
+                    x: xPos,
+                    y: yPos,
+                    width: 20,
+                    height: 20,
+                    collected: false
+                });
+            }
+            
+            // Set flagpole
+            flagpole = {
+                x: flagDistance,
+                y: ground.y - 100,
+                width: 20,
+                height: 100
+            };
+            
+            console.log('Level initialized with:', {
+                obstacles: obstacles.length,
+                coins: coins.length,
+                flagpole: flagpole
+            });
+        }
+        
+        function jump() {
+            if (!mario.isJumping) {
+                mario.velocityY = mario.jumpPower;
+                mario.isJumping = true;
+            }
+        }
+        
+        function update() {
+            // Apply gravity to mario
+            mario.velocityY += mario.gravity;
+            mario.y += mario.velocityY;
+            
+            // Update mario's horizontal position
+            mario.x += mario.velocityX;
+            
+            // Keep mario within screen bounds
+            if (mario.x < 0) mario.x = 0;
+            if (mario.x + mario.width > gameWidth) mario.x = gameWidth - mario.width;
+            
+            // Check if mario is on the ground
+            if (mario.y >= ground.y - mario.height) {
+                mario.y = ground.y - mario.height;
+                mario.velocityY = 0;
+                mario.isJumping = false;
+            }
+            
+            // Move obstacles
+            for (let obstacle of obstacles) {
+                if (obstacle.type === 'goomba') {
+                    obstacle.x += obstacle.velocityX;
+                    
+                    // Reverse direction if goomba hits edge
+                    if (obstacle.x < 0 || obstacle.x > flagpole.x) {
+                        obstacle.velocityX *= -1;
+                    }
+                }
+                
+                // Check collision with obstacles
+                if (checkCollision(mario, obstacle)) {
+                    gameOver();
+                    return;
+                }
+            }
+            
+            // Check collision with coins
+            for (let coin of coins) {
+                if (!coin.collected && checkCollision(mario, coin)) {
+                    coin.collected = true;
+                    score += 100;
+                }
+            }
+            
+            // Check if mario reached the flagpole
+            if (checkCollision(mario, flagpole)) {
+                levelComplete();
+                return;
+            }
+            
+            // Check if mario fell off the bottom of the screen
+            if (mario.y > gameHeight) {
+                gameOver();
+                return;
+            }
+        }
+    </script>
+</body>
+</html>
