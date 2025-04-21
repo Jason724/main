@@ -276,6 +276,13 @@
             ctx.fill();
             
             ctx.restore();
+
+            // Update arrow position to match bow while drawing
+            if (isDrawing) {
+                gameState.arrow.x = x;
+                gameState.arrow.y = y;
+                gameState.arrow.angle = angle;
+            }
         }
 
         // Draw arrow
@@ -389,6 +396,24 @@
             }
         }
 
+        // Create breaking particles when arrow hits ground
+        function createBreakingParticles(x, y) {
+            for (let i = 0; i < 15; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3;
+                
+                gameState.particles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: '#8B4513', // Dark brown for wood
+                    size: 2 + Math.random() * 3,
+                    life: 30 + Math.random() * 30
+                });
+            }
+        }
+
         // Update game state
         function update() {
             updateBalloons();
@@ -432,17 +457,28 @@
         
                 // Check for collisions with walls or ground and bounce
                 if (gameState.arrow.x > canvas.width) {
-                    gameState.arrow.x = canvas.width;
-                    gameState.arrow.angle = Math.PI - gameState.arrow.angle;
-                    gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
+                    gameState.arrow.flying = false;
+                    gameState.arrow.bounces = 0;
+                    checkGameState();
                 } else if (gameState.arrow.x < 0) {
-                    gameState.arrow.x = 0;
-                    gameState.arrow.angle = Math.PI - gameState.arrow.angle;
-                    gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
-                } else if (gameState.arrow.y > canvas.height - 50) { // Adjust for ground height
+                    gameState.arrow.flying = false;
+                    gameState.arrow.bounces = 0;
+                    checkGameState();
+                } else if (gameState.arrow.y > canvas.height - 50) { // Ground collision
                     gameState.arrow.y = canvas.height - 50;
-                    gameState.arrow.angle = -gameState.arrow.angle;
+                    // Calculate reflection angle based on surface normal
+                    const normalAngle = Math.PI / 2; // Ground normal points up
+                    const incidentAngle = gameState.arrow.angle;
+                    gameState.arrow.angle = 2 * normalAngle - incidentAngle;
                     gameState.arrow.bounces = (gameState.arrow.bounces || 0) + 1;
+                    // Reduce speed and ensure minimum speed after ground bounce
+                    gameState.arrow.speed = Math.max(gameState.arrow.speed * 0.7, MIN_SPEED);
+                    // Add slight upward velocity to prevent sticking
+                    gameState.arrow.y -= 2;
+                } else if (gameState.arrow.y < 0) { // Top of screen
+                    gameState.arrow.flying = false;
+                    gameState.arrow.bounces = 0;
+                    checkGameState();
                 }
         
                 // Check if arrow should disappear after 2 bounces
@@ -451,22 +487,9 @@
                     gameState.arrow.bounces = 0;  // Reset bounce count for the next arrow
                 }
         
-                // Check if arrow is out of bounds
-                if (isArrowOutOfBounds()) {
-                    gameState.arrow.flying = false;
-                    checkGameState();
-                }
-        
                 // Check collision with balloons
                 checkBalloonCollision();
             }
-        }
-        // Check if arrow is out of bounds
-        function isArrowOutOfBounds() {
-            return gameState.arrow.x > canvas.width || 
-                   gameState.arrow.x < 0 || 
-                   gameState.arrow.y > canvas.height || 
-                   gameState.arrow.y < 0;
         }
 
         // Update particles
@@ -529,11 +552,14 @@
 
         // Check game state to see if player failed the level
         function checkGameState() {
-            if (gameState.arrows <= 0 && !gameState.arrow.flying) {
-                if (gameState.balloonsPopped < levels[gameState.level - 1].balloons) {
+            if (!gameState.arrow.flying) {
+                if (gameState.arrows <= 0 && gameState.balloonsPopped < levels[gameState.level - 1].balloons) {
+                    // Game over - restart level
                     setTimeout(() => {
                         setupLevel(gameState.level);
                     }, 1000);
+                } else if (gameState.balloonsPopped < levels[gameState.level - 1].balloons) {
+                    resetArrow();
                 }
             }
         }
@@ -547,13 +573,15 @@
                 gameState.arrow.angle = gameState.bow.angle;
                 gameState.arrow.flying = true;
                 gameState.arrows--;
+                arrowsEl.textContent = gameState.arrows; // Update UI immediately
 
                 // Start the timer to reset the arrow after 2.5 seconds
                 setTimeout(() => {
                     if (gameState.arrow.flying) {
                         resetArrow();
-                        }
-                    }, 2500);
+                        checkGameState(); // Check game state after arrow reset
+                    }
+                }, 2500);
             }
             
             gameState.bow.isDrawing = false;

@@ -3,331 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Daily arcade games - Play a new game every day!">
+    <meta name="theme-color" content="#0066cc">
+    <meta property="og:title" content="Arcade - Game of the Day">
+    <meta property="og:description" content="Play a new arcade game every day!">
+    <meta property="og:type" content="website">
     <title>Arcade - Game of the Day</title>
-    <style>
-        :root {
-            --apple-light-bg: #f5f5f7;
-            --apple-dark-text: #1d1d1f;
-            --apple-light-text: #86868b;
-            --apple-accent: #0066cc;
-            --apple-highlight: #2997ff;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-        
-        body {
-            background-color: var(--apple-light-bg);
-            color: var(--apple-dark-text);
-            line-height: 1.5;
-        }
-        
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            margin-bottom: 40px;
-        }
-        
-        .logo {
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
-        
-        nav ul {
-            display: flex;
-            list-style: none;
-        }
-        
-        nav li {
-            margin-left: 32px;
-        }
-        
-        nav a {
-            color: var(--apple-dark-text);
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-        
-        nav a:hover {
-            color: var(--apple-accent);
-        }
-        
-        .hero {
-            margin-bottom: 60px;
-            text-align: center;
-        }
-        
-        .eyebrow {
-            font-size: 14px;
-            color: var(--apple-accent);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .date {
-            font-size: 16px;
-            color: var(--apple-light-text);
-            margin-bottom: 24px;
-        }
-        
-        h1 {
-            font-size: 48px;
-            font-weight: 700;
-            letter-spacing: -1px;
-            margin-bottom: 24px;
-        }
-        
-        .hero-description {
-            font-size: 21px;
-            color: var(--apple-light-text);
-            max-width: 600px;
-            margin: 0 auto 40px;
-            line-height: 1.4;
-        }
-        
-        .play-button {
-            display: inline-block;
-            padding: 20px 40px;
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            background-color: var(--apple-accent);
-            border-radius: 12px;
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-        
-        .play-button:hover {
-            background-color: var(--apple-highlight);
-        }
-        
-        .previous-games {
-            padding-top: 80px;
-        }
-        
-        .section-title {
-            font-size: 32px;
-            font-weight: 600;
-            margin-bottom: 32px;
-            text-align: center;
-        }
-        
-        .game-list {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        
-        .game-item {
-            display: flex;
-            align-items: center;
-            padding: 16px 24px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            background-color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        
-        .game-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        }
-        
-        .game-thumbnail {
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            overflow: hidden;
-            margin-right: 24px;
-            flex-shrink: 0;
-        }
-        
-        .game-thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .game-info {
-            flex-grow: 1;
-        }
-        
-        .game-date {
-            font-size: 12px;
-            color: var(--apple-light-text);
-            margin-bottom: 4px;
-        }
-        
-        .game-name {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-        
-        .game-category {
-            font-size: 14px;
-            color: var(--apple-light-text);
-        }
-        
-        .cta-button {
-            background-color: var(--apple-accent);
-            color: white;
-            border: none;
-            border-radius: 20px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        
-        .cta-button:hover {
-            background-color: var(--apple-highlight);
-        }
-        
-        footer {
-            text-align: center;
-            padding: 40px 0;
-            color: var(--apple-light-text);
-            font-size: 12px;
-            margin-top: 80px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <div class="logo">Arcade</div>
-            <nav>
+            <div class="logo" role="banner">Arcade</div>
+            <nav role="navigation">
                 <ul>
                     <li><a href="about.html">About</a></li>
                 </ul>
             </nav>
         </header>
         
-        <section class="hero">
-            <div class="eyebrow">Game of the Day</div>
-            <div class="date" id="current-date"></div>
-            <h1>Tetris</h1>
-            <p class="hero-description">Tetris!</p>
-            <a href="tetris.html" class="play-button">PLAY</a>
-        </section>
+        <main>
+            <section class="hero" role="region" aria-label="Game of the Day">
+                <div class="eyebrow">Game of the Day</div>
+                <div class="date" id="current-date"></div>
+                <h1>Tetris</h1>
+                <p class="hero-description">Tetris!</p>
+                <a href="tetris.html" class="play-button" role="button">PLAY</a>
+            </section>
+            
+            <section class="previous-games" role="region" aria-label="Previous Games">
+                <h2 class="section-title">Previous Games</h2>
+                <div class="game-list" id="previous-games-list" role="list">
+                    <!-- Games will be dynamically added here -->
+                </div>
+            </section>
+        </main>
         
-        <section class="previous-games">
-            <h2 class="section-title">Previous Games</h2>
-            <div class="game-list" id="previous-games-list">
-                <!-- Games will be dynamically added here -->
-            </div>
-        </section>
-        
-        <footer>
+        <footer role="contentinfo">
             <p>© 2025 Game of the Day. All rights reserved. Games were designed and shared exclusively by JayJaw.com</p>
         </footer>
-
     </div>
 
-    <script>
-        // Set current date
-        const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const currentDateElement = document.getElementById('current-date');
-        const today = new Date();
-        currentDateElement.textContent = today.toLocaleDateString('en-US', dateOptions);
-        
-        // Previous games data
-        const previousGames = [
-            {
-                date: new Date(2025, 4, 14), // April 14, 2025
-                name: "Workout",
-                category: "Fitness",
-                url: "workout.html"
-            },
-            {
-                date: new Date(2025, 3, 19), // March 19, 2025
-                name: "Space Invaders",
-                category: "Old School",
-                url: "space.html"
-            },
-            {
-                date: new Date(2025, 3, 18), // March 18, 2025
-                name: "Flappy",
-                category: "Random",
-                url: "flappy.html"
-            },
-            {
-                date: new Date(2025, 3, 17), // March 17, 2025
-                name: "Frogger",
-                category: "Old School",
-                url: "frogger.html"
-            },
-            {
-                date: new Date(2025, 3, 14), // March 14, 2025
-                name: "Archer",
-                category: "Stick Figure",
-                url: "archer.html"
-            },
-            {
-                date: new Date(2025, 3, 13), // March 13, 2025
-                name: "Pong",
-                category: "Old School",
-                url: "pong.html"
-            },
-            {
-                date: new Date(2025, 3, 12), // March 12, 2025
-                name: "Connections",
-                category: "Words",
-                url: "connections.html"
-            },
-    /*
-            {
-                date: new Date(2025, 3, 11), // March 11, 2025
-                name: "Neon Drift",
-                category: "Racing",
-                thumbnail: "/api/placeholder/160/160",
-                url: "https://example.com/neon-drift"
-            },
-    */
-            // Add more games as needed
-        ];
-        
-        // Generate previous games list
-        const gameListElement = document.getElementById('previous-games-list');
-        
-        previousGames.forEach(game => {
-            const gameDate = game.date.toLocaleDateString('en-US', dateOptions);
-            
-            const gameElement = document.createElement('div');
-            gameElement.className = 'game-item';
-            
-            gameElement.innerHTML = `
-                <div class="game-info">
-                    <div class="game-date">${gameDate}</div>
-                    <div class="game-name">${game.name}</div>
-                    <div class="game-category">${game.category}</div>
-                </div>
-                <a href="${game.url}" class="cta-button">Play</a>
-            `;
-            
-            gameListElement.appendChild(gameElement);
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,0 +1,263 @@
+:root {
+    --apple-light-bg: #f5f5f7;
+    --apple-dark-text: #1d1d1f;
+    --apple-light-text: #86868b;
+    --apple-accent: #0066cc;
+    --apple-highlight: #2997ff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    background-color: var(--apple-light-bg);
+    color: var(--apple-dark-text);
+    line-height: 1.5;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 40px;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+}
+
+nav ul {
+    display: flex;
+    list-style: none;
+}
+
+nav li {
+    margin-left: 32px;
+}
+
+nav a {
+    color: var(--apple-dark-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+nav a:hover {
+    color: var(--apple-accent);
+}
+
+.hero {
+    margin-bottom: 60px;
+    text-align: center;
+}
+
+.eyebrow {
+    font-size: 14px;
+    color: var(--apple-accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.date {
+    font-size: 16px;
+    color: var(--apple-light-text);
+    margin-bottom: 24px;
+}
+
+h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 24px;
+}
+
+.hero-description {
+    font-size: 21px;
+    color: var(--apple-light-text);
+    max-width: 600px;
+    margin: 0 auto 40px;
+    line-height: 1.4;
+}
+
+.play-button {
+    display: inline-block;
+    padding: 20px 40px;
+    font-size: 24px;
+    font-weight: 700;
+    color: white;
+    background-color: var(--apple-accent);
+    border-radius: 12px;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.play-button:hover {
+    background-color: var(--apple-highlight);
+}
+
+.previous-games {
+    padding-top: 80px;
+}
+
+.section-title {
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.game-list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.game-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    background-color: white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.game-thumbnail {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-right: 24px;
+    flex-shrink: 0;
+}
+
+.game-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.game-info {
+    flex-grow: 1;
+}
+
+.game-date {
+    font-size: 12px;
+    color: var(--apple-light-text);
+    margin-bottom: 4px;
+}
+
+.game-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.game-category {
+    font-size: 14px;
+    color: var(--apple-light-text);
+}
+
+.cta-button {
+    background-color: var(--apple-accent);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cta-button:hover {
+    background-color: var(--apple-highlight);
+}
+
+footer {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--apple-light-text);
+    font-size: 12px;
+    margin-top: 80px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 16px;
+    }
+
+    h1 {
+        font-size: 36px;
+    }
+
+    .hero-description {
+        font-size: 18px;
+    }
+
+    .game-item {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+
+    .game-thumbnail {
+        margin: 0 0 16px 0;
+    }
+
+    .cta-button {
+        margin-top: 16px;
+    }
+}
+
+/* Loading State */
+.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Back to Top Button */
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--apple-accent);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.back-to-top.visible {
+    opacity: 1;
+} 
