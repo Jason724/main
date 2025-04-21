@@ -220,7 +220,7 @@
         </div>
         <div id="instructions">
             <p>Desktop: Space to rotate, Arrow keys to move, Up arrow to hard drop</p>
-            <p>Mobile: Tap to rotate, Swipe to move, Double swipe down to hard drop</p>
+            <p>Mobile: Tap to rotate, Swipe to move, Swipe up to hard drop</p>
             <p>Clear lines to score points!</p>
         </div>
         <div id="start-screen">
@@ -780,15 +780,11 @@
             } else {
                 // Vertical swipe
                 if (diffY > 0) {
-                    const now = Date.now();
-                    if (now - lastSwipeDownTime < doubleSwipeThreshold) {
-                        // Double swipe detected - hard drop
-                        movePiece('hardDrop');
-                    } else {
-                        // Single swipe down
-                        movePiece('down');
-                    }
-                    lastSwipeDownTime = now;
+                    // Swipe down
+                    movePiece('down');
+                } else {
+                    // Swipe up - hard drop
+                    movePiece('hardDrop');
                 }
             }
         }, false);
