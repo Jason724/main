@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Meal Picker + Shopping List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f4f4f4;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .meal-section {
+      margin-bottom: 30px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button {
+      margin: 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .output {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #e9ecef;
+      border-radius: 5px;
+    }
+    .selected {
+      background-color: #28a745 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Choose Meals for the Day</h1>
+
+  <div class="meal-section">
+    <h2>Breakfast</h2>
+    <button onclick="selectMeal('breakfast', 'breakfast1', this)">Option 1</button>
+    <button onclick="selectMeal('breakfast', 'breakfast2', this)">Option 2</button>
+    <div class="output" id="breakfastDesc"></div>
+  </div>
+
+  <div class="meal-section">
+    <h2>Lunch</h2>
+    <button onclick="selectMeal('lunch', 'lunch1', this)">Option 1</button>
+    <button onclick="selectMeal('lunch', 'lunch2', this)">Option 2</button>
+    <div class="output" id="lunchDesc"></div>
+  </div>
+
+  <div class="meal-section">
+    <h2>Snack</h2>
+    <button onclick="selectMeal('snack', 'snack1', this)">Option 1</button>
+    <button onclick="selectMeal('snack', 'snack2', this)">Option 2</button>
+    <div class="output" id="snackDesc"></div>
+  </div>
+
+  <div class="meal-section">
+    <h2>Dinner</h2>
+    <button onclick="selectMeal('dinner', 'dinner1', this)">Option 1</button>
+    <button onclick="selectMeal('dinner', 'dinner2', this)">Option 2</button>
+    <div class="output" id="dinnerDesc"></div>
+  </div>
+
+  <div style="text-align:center; margin-top:20px;">
+    <button onclick="generateShoppingList()">Generate Shopping List</button>
+  </div>
+
+  <div class="meal-section" id="shoppingListSection" style="display:none;">
+    <h2>Shopping List</h2>
+    <ul id="shoppingList"></ul>
+  </div>
+
+  <script>
+    const mealDescriptions = {
+      breakfast1: "2 eggs + spinach + ½ cup oats with 1 tsp peanut butter and cinnamon.",
+      breakfast2: "Greek yogurt with ½ banana, 1 tsp honey, and a sprinkle of oats or chia seeds.",
+      lunch1: "Grilled chicken, roasted sweet potato (¾ cup), steamed spinach, olive oil drizzle.",
+      lunch2: "Chicken and rice bowl with sautéed spinach and a little avocado.",
+      snack1: "Protein shake with banana or 1 tbsp honey.",
+      snack2: "Hard-boiled egg + a small apple + 1 tsp peanut butter.",
+      dinner1: "Grilled chicken, spinach, and small sweet potato or ¼ cup rice.",
+      dinner2: "Greek yogurt bowl with berries, honey, and a scoop of protein mixed in."
+    };
+
+    const ingredientsMap = {
+      breakfast1: ["Eggs", "Spinach", "Oats", "Peanut butter", "Cinnamon"],
+      breakfast2: ["Greek yogurt", "Banana", "Honey", "Oats or chia seeds"],
+      lunch1: ["Chicken breast", "Sweet potato", "Spinach", "Olive oil"],
+      lunch2: ["Chicken breast", "White rice", "Spinach", "Avocado"],
+      snack1: ["Protein powder", "Banana or honey"],
+      snack2: ["Hard-boiled egg", "Apple", "Peanut butter"],
+      dinner1: ["Chicken breast", "Spinach", "Sweet potato or rice"],
+      dinner2: ["Greek yogurt", "Berries", "Honey", "Protein powder"]
+    };
+
+    const selectedMeals = {};
+
+    function selectMeal(mealType, mealKey, button) {
+      selectedMeals[mealType] = mealKey;
+
+      // Highlight selected button
+      const buttons = button.parentElement.querySelectorAll("button");
+      buttons.forEach(btn => btn.classList.remove("selected"));
+      button.classList.add("selected");
+
+      document.getElementById(mealType + "Desc").innerText = mealDescriptions[mealKey];
+    }
+
+    function generateShoppingList() {
+      const shoppingItems = new Set();
+      for (let key in selectedMeals) {
+        const ingredients = ingredientsMap[selectedMeals[key]];
+        ingredients.forEach(item => shoppingItems.add(item));
+      }
+
+      const list = document.getElementById("shoppingList");
+      list.innerHTML = "";
+      shoppingItems.forEach(item => {
+        const li = document.createElement("li");
+        li.innerText = item;
+        list.appendChild(li);
+      });
+
+      document.getElementById("shoppingListSection").style.display = "block";
+    }
+  </script>
+
+</body>
+</html>
