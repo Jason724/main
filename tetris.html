@@ -124,6 +124,31 @@
             z-index: 100;
             max-width: 80%;
         }
+        #start-screen {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            z-index: 100;
+        }
+        #start-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #start-btn:hover {
+            background-color: #45a049;
+        }
         #game-over {
             display: none;
             position: absolute;
@@ -194,9 +219,13 @@
             <canvas id="tetris-canvas"></canvas>
         </div>
         <div id="instructions">
-            <p>Desktop: Space to rotate, Arrow keys to move</p>
-            <p>Mobile: Tap to rotate, Swipe to move</p>
+            <p>Desktop: Space to rotate, Arrow keys to move, Up arrow to hard drop</p>
+            <p>Mobile: Tap to rotate, Swipe to move, Double swipe down to hard drop</p>
             <p>Clear lines to score points!</p>
+        </div>
+        <div id="start-screen">
+            <h2>Simple Tetris</h2>
+            <button id="start-btn">Start Game</button>
         </div>
         <div id="game-over">
             <h2>Game Over</h2>
@@ -225,6 +254,8 @@
         const levelUpElement = document.getElementById('level-up');
         const pauseBtn = document.getElementById('pause-btn');
         const pauseScreen = document.getElementById('pause-screen');
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
 
         // Game configuration
         let COLS = 10;
@@ -245,6 +276,8 @@
         let touchStartX = 0;
         let touchStartY = 0;
         let swipeThreshold = 30;
+        let lastSwipeDownTime = 0;
+        let doubleSwipeThreshold = 300; // Time in ms between swipes to count as double swipe
 
         // Tetromino shapes
         const SHAPES = [
@@ -508,6 +541,39 @@
                     }
                     dropStart = Date.now();
                     break;
+                case 'hardDrop':
+                    // Drop the piece to the bottom
+                    while (isValid(0, 1)) {
+                        currentPiece.y++;
+                        score += 2; // Bonus points for hard drop
+                    }
+                    scoreElement.textContent = score;
+                    lockPiece();
+                    checkLines();
+                    
+                    // Move next piece to current
+                    currentPiece = {
+                        shape: nextPiece.shape,
+                        color: nextPiece.color,
+                        x: nextPiece.x,
+                        y: nextPiece.y
+                    };
+                    
+                    // Generate new next piece
+                    nextPiece = generateRandomPiece();
+                    
+                    // Reset next piece flag
+                    showNextPiece = false;
+                    
+                    // Check for game over
+                    if (!isValid(0, 0)) {
+                        gameOver = true;
+                        finalScoreElement.textContent = score;
+                        finalLevelElement.textContent = level;
+                        gameOverElement.style.display = 'block';
+                    }
+                    dropStart = Date.now();
+                    break;
             }
         }
 
@@ -668,6 +734,9 @@
                 case 40: // Down arrow
                     if (!paused) movePiece('down');
                     break;
+                case 38: // Up arrow
+                    if (!paused) movePiece('hardDrop');
+                    break;
                 case 32: // Space
                     if (!paused) rotatePiece();
                     break;
@@ -711,7 +780,15 @@
             } else {
                 // Vertical swipe
                 if (diffY > 0) {
-                    movePiece('down');
+                    const now = Date.now();
+                    if (now - lastSwipeDownTime < doubleSwipeThreshold) {
+                        // Double swipe detected - hard drop
+                        movePiece('hardDrop');
+                    } else {
+                        // Single swipe down
+                        movePiece('down');
+                    }
+                    lastSwipeDownTime = now;
                 }
             }
         }, false);
@@ -744,13 +821,15 @@
             update();
         }
 
-        // Make the instructions disappear after 6 seconds
-        setTimeout(() => {
+        // Start button event listener
+        startBtn.addEventListener('click', () => {
+            startScreen.style.display = 'none';
             instructions.style.opacity = '0';
             setTimeout(() => {
                 instructions.style.display = 'none';
             }, 500);
-        }, 6000);
+            update();
+        });
 
         // Initialize the game
         window.onload = () => {
@@ -764,7 +843,9 @@
             // Set initial next level target
             nextLevelLinesElement.textContent = linesPerLevel[level];
             
-            update();
+            // Show start screen and instructions
+            startScreen.style.display = 'block';
+            instructions.style.display = 'block';
         };
 
         // Handle window resize
