@@ -59,24 +59,31 @@
         .controls {
             margin-top: 20px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
         }
 
         button {
-            padding: 10px 20px;
-            font-size: 1rem;
+            padding: 15px 30px;
+            font-size: 1.1rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             background: rgba(0, 195, 255, 0.2);
             color: white;
             cursor: pointer;
             transition: all 0.3s;
             border: 1px solid rgba(0, 195, 255, 0.3);
+            min-width: 100px;
+            min-height: 48px;
         }
 
-        button:hover {
-            background: rgba(0, 195, 255, 0.3);
-            box-shadow: 0 0 15px rgba(0, 195, 255, 0.2);
+        button:active {
+            transform: scale(0.95);
+            background: rgba(0, 195, 255, 0.4);
+        }
+
+        .time-input input:active {
+            background: rgba(255, 255, 255, 0.15);
+            transform: scale(0.98);
         }
 
         .hand {
@@ -145,24 +152,42 @@
         }
 
         .time-input input {
-            width: 60px;
-            padding: 8px;
+            width: 80px;
+            padding: 12px;
             background: rgba(255, 255, 255, 0.1);
             border: 1px solid rgba(0, 195, 255, 0.3);
-            border-radius: 5px;
+            border-radius: 8px;
             color: white;
             text-align: center;
-            font-size: 1rem;
+            font-size: 1.2rem;
             -webkit-appearance: none;
             -moz-appearance: none;
             appearance: none;
             touch-action: none;
+            min-height: 48px;
         }
 
         .time-input input:focus {
             outline: none;
             border-color: rgba(0, 195, 255, 0.8);
             box-shadow: 0 0 10px rgba(0, 195, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .stopwatch {
+                width: 280px;
+                height: 280px;
+            }
+            
+            .time-input input {
+                width: 70px;
+                font-size: 1.1rem;
+            }
+            
+            button {
+                padding: 12px 24px;
+                font-size: 1rem;
+            }
         }
     </style>
 </head>
@@ -222,15 +247,17 @@
         let flashInterval;
         let lastScrollTime = 0;
         let scrollAccumulator = 0;
-        const SCROLL_THRESHOLD = 50; // Adjust this value to change sensitivity
+        const SCROLL_THRESHOLD = 30; // Reduced from 50 for better mobile sensitivity
         let lastTouchY = 0;
         let isTouchMoving = false;
         let lastAngle = 0;
         let totalRotation = 0;
-        const ROTATION_THRESHOLD = 5; // Reduced threshold for smoother scrolling
+        const ROTATION_THRESHOLD = 3; // Reduced from 5 for smoother mobile interaction
         let isAdjusting = false;
         let isDraggingMinuteHand = false;
         let touchStartTime = 0;
+        const TOUCH_DEBOUNCE = 100; // Added debounce time for touch events
+        const MINUTE_HAND_DRAG_THRESHOLD = 10; // Added threshold for minute hand drag
 
         function updateDisplay() {
             const minutes = Math.floor(time / 60);
@@ -378,7 +405,7 @@
             
             if (isOnMinuteHand) {
                 handleMinuteHandStart(e);
-            } else if (distance > rect.width/2 - 20) {
+            } else if (distance > rect.width/2 - 30) { // Increased from 20 for better touch area
                 isAdjusting = true;
                 lastAngle = getAngleFromCenter(e);
                 touchStartTime = Date.now();
@@ -388,6 +415,9 @@
 
         function handleTouchMove(e) {
             e.preventDefault();
+            const now = Date.now();
+            if (now - touchStartTime < TOUCH_DEBOUNCE) return; // Added debounce
+            
             if (isDraggingMinuteHand) {
                 handleMinuteHandMove(e);
             } else if (isAdjusting) {
@@ -431,13 +461,15 @@
             const touch = e.touches[0];
             const startY = touch.clientY;
             let lastY = startY;
+            let touchStartTime = Date.now();
             
             function handleMove(moveEvent) {
                 moveEvent.preventDefault();
                 const currentY = moveEvent.touches[0].clientY;
                 const deltaY = lastY - currentY;
                 
-                if (Math.abs(deltaY) > 5) { // Threshold to prevent accidental changes
+                // Added time check to prevent accidental changes
+                if (Math.abs(deltaY) > 5 && Date.now() - touchStartTime > 100) {
                     const currentValue = parseInt(input.value) || 0;
                     const maxValue = input.id === 'minutes' ? 60 : 59;
                     const minValue = 0;
@@ -483,6 +515,7 @@
         function handleMinuteHandMove(e) {
             if (!isDraggingMinuteHand) return;
             e.preventDefault();
+            
             const currentAngle = getAngleFromCenter(e);
             let angleDiff = currentAngle - lastAngle;
 
@@ -490,19 +523,22 @@
             if (angleDiff > 180) angleDiff -= 360;
             if (angleDiff < -180) angleDiff += 360;
 
-            // Convert angle difference to minutes (360 degrees = 60 minutes)
-            const minuteChange = Math.round((angleDiff / 360) * 60);
-            if (minuteChange !== 0) {
-                time = Math.max(0, Math.min(3600, time + (minuteChange * 60)));
-                
-                const minutes = Math.floor(time / 60);
-                const seconds = time % 60;
-                minutesInput.value = minutes;
-                secondsInput.value = seconds;
-                
-                updateDisplay();
-                lastAngle = currentAngle;
-                vibrate();
+            // Only update if the change is significant enough
+            if (Math.abs(angleDiff) >= MINUTE_HAND_DRAG_THRESHOLD) {
+                // Convert angle difference to minutes (360 degrees = 60 minutes)
+                const minuteChange = Math.round((angleDiff / 360) * 60);
+                if (minuteChange !== 0) {
+                    time = Math.max(0, Math.min(3600, time + (minuteChange * 60)));
+                    
+                    const minutes = Math.floor(time / 60);
+                    const seconds = time % 60;
+                    minutesInput.value = minutes;
+                    secondsInput.value = seconds;
+                    
+                    updateDisplay();
+                    lastAngle = currentAngle;
+                    vibrate();
+                }
             }
         }
 
