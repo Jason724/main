@@ -221,6 +221,9 @@
         const SCROLL_THRESHOLD = 50; // Adjust this value to change sensitivity
         let lastTouchY = 0;
         let isTouchMoving = false;
+        let lastAngle = 0;
+        let totalRotation = 0;
+        const ROTATION_THRESHOLD = 10; // degrees of rotation needed for a time change
 
         function updateDisplay() {
             const minutes = Math.floor(time / 60);
@@ -389,45 +392,70 @@
             isTouchMoving = false;
         }
 
-        // Add event listeners for both desktop and mobile
-        outerRing.addEventListener('wheel', handleScroll, { passive: false });
-        outerRing.addEventListener('touchstart', handleTouchStart, { passive: false });
-        outerRing.addEventListener('touchmove', handleTouchMove, { passive: false });
-        outerRing.addEventListener('touchend', handleTouchEnd);
+        function getAngleFromCenter(e) {
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            return Math.atan2(y - centerY, x - centerX) * (180 / Math.PI);
+        }
+
+        function handleInteractionStart(e) {
+            e.preventDefault();
+            lastAngle = getAngleFromCenter(e);
+            vibrate();
+        }
+
+        function handleInteractionMove(e) {
+            e.preventDefault();
+            const currentAngle = getAngleFromCenter(e);
+            let angleDiff = currentAngle - lastAngle;
+
+            // Handle crossing the -180/180 boundary
+            if (angleDiff > 180) angleDiff -= 360;
+            if (angleDiff < -180) angleDiff += 360;
+
+            totalRotation += angleDiff;
+            lastAngle = currentAngle;
+
+            if (Math.abs(totalRotation) >= ROTATION_THRESHOLD) {
+                const direction = Math.sign(totalRotation);
+                const timeChange = direction * 5; // Change time by 5 seconds per threshold
+                time = Math.max(0, Math.min(3600, time + timeChange));
+                
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                minutesInput.value = minutes;
+                secondsInput.value = seconds;
+                
+                updateDisplay();
+                totalRotation = 0;
+                
+                playScrollSound();
+                vibrate();
+            }
+        }
+
+        function handleInteractionEnd() {
+            totalRotation = 0;
+        }
+
+        // Remove old event listeners
+        outerRing.removeEventListener('wheel', handleScroll);
+        outerRing.removeEventListener('touchstart', handleTouchStart);
+        outerRing.removeEventListener('touchmove', handleTouchMove);
+        outerRing.removeEventListener('touchend', handleTouchEnd);
+
+        // Add new event listeners for circular interaction
+        outerRing.addEventListener('mousedown', handleInteractionStart);
+        outerRing.addEventListener('touchstart', handleInteractionStart, { passive: false });
         
-        // Remove the old mouse drag functionality
-        outerRing.removeEventListener('mousedown', (e) => {
-            isDragging = true;
-            const rect = outerRing.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-        });
-
-        document.removeEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const rect = outerRing.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-            const angleDiff = currentAngle - startAngle;
-            
-            const timeDiff = Math.round((angleDiff / (2 * Math.PI)) * 3600);
-            time = Math.max(0, Math.min(3600, time + timeDiff));
-            
-            const minutes = Math.floor(time / 60);
-            const seconds = time % 60;
-            minutesInput.value = minutes;
-            secondsInput.value = seconds;
-            
-            updateDisplay();
-            startAngle = currentAngle;
-        });
-
-        document.removeEventListener('mouseup', () => {
-            isDragging = false;
-        });
+        document.addEventListener('mousemove', handleInteractionMove);
+        document.addEventListener('touchmove', handleInteractionMove, { passive: false });
+        
+        document.addEventListener('mouseup', handleInteractionEnd);
+        document.addEventListener('touchend', handleInteractionEnd);
 
         startButton.addEventListener('click', startTimer);
         pauseButton.addEventListener('click', pauseTimer);
