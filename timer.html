@@ -190,13 +190,77 @@
                 font-size: 1rem;
             }
         }
+
+        /* Add mode indicator */
+        .mode-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: rgba(0, 195, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .mode-indicator.visible {
+            opacity: 1;
+        }
+
+        /* Add progress ring */
+        .progress-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            border-top-color: rgba(0, 195, 255, 0.5);
+            transition: transform 0.1s linear;
+        }
+
+        /* Add quick set buttons */
+        .quick-set {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .quick-set button {
+            min-width: auto;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        /* Add notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: rgba(0, 195, 255, 0.2);
+            border-radius: 8px;
+            font-size: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .notification.visible {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
     <div class="timer-container">
+        <div class="mode-indicator" id="modeIndicator">Adjusting Time</div>
         <audio id="alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
         <audio id="scrollSound" src="https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3" preload="auto"></audio>
         <div class="stopwatch">
+            <div class="progress-ring" id="progressRing"></div>
             <div class="outer-ring"></div>
             <div class="minute-marks" id="minute-marks"></div>
             <div class="hand minute-hand"></div>
@@ -209,11 +273,19 @@
             <span>:</span>
             <input type="number" id="seconds" min="0" max="59" value="0" placeholder="Sec">
         </div>
+        <div class="quick-set">
+            <button data-time="300">5 min</button>
+            <button data-time="600">10 min</button>
+            <button data-time="900">15 min</button>
+            <button data-time="1800">30 min</button>
+            <button data-time="3600">1 hour</button>
+        </div>
         <div class="controls">
             <button id="start">Start</button>
             <button id="pause">Pause</button>
             <button id="reset">Reset</button>
         </div>
+        <div class="notification" id="notification"></div>
     </div>
 
     <script>
@@ -227,6 +299,10 @@
         const minutesInput = document.getElementById('minutes');
         const secondsInput = document.getElementById('seconds');
         const minuteMarks = document.getElementById('minute-marks');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const progressRing = document.getElementById('progressRing');
+        const notification = document.getElementById('notification');
+        const quickSetButtons = document.querySelectorAll('.quick-set button');
 
         // Create minute marks
         for (let i = 0; i < 60; i++) {
@@ -265,12 +341,14 @@
             const seconds = time % 60;
             timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
             
-            // Update hands
             const minuteDegrees = (time / 3600) * 360;
             const secondDegrees = ((time % 60) / 60) * 360;
             
             minuteHand.style.transform = `translateX(-50%) rotate(${minuteDegrees}deg)`;
             secondHand.style.transform = `translateX(-50%) rotate(${secondDegrees}deg)`;
+            
+            updateProgressRing();
+            updateModeIndicator();
         }
 
         function triggerAlarm() {
@@ -300,6 +378,8 @@
         function startTimer() {
             if (!isRunning && time > 0) {
                 isRunning = true;
+                updateModeIndicator();
+                vibrate([50, 50, 50]); // Triple vibration for start
                 timer = setInterval(() => {
                     if (time > 0) {
                         time--;
@@ -316,6 +396,8 @@
             isRunning = false;
             clearInterval(timer);
             stopAlarm();
+            updateModeIndicator();
+            vibrate([100, 50, 100]); // Different pattern for pause
         }
 
         function resetTimer() {
@@ -355,9 +437,13 @@
             scrollSound.play();
         }
 
-        function vibrate() {
+        function vibrate(pattern = 50) {
             if (navigator.vibrate) {
-                navigator.vibrate(50); // Vibrate for 50ms
+                if (Array.isArray(pattern)) {
+                    navigator.vibrate(pattern);
+                } else {
+                    navigator.vibrate(pattern);
+                }
             }
         }
 
@@ -705,6 +791,53 @@
             input.value = newValue;
             setTime();
             vibrate();
+        }
+
+        // Add quick set functionality
+        quickSetButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const seconds = parseInt(button.dataset.time);
+                time = seconds;
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                minutesInput.value = minutes;
+                secondsInput.value = remainingSeconds;
+                updateDisplay();
+                showNotification(`Set to ${minutes}:${remainingSeconds.toString().padStart(2, '0')}`);
+            });
+        });
+
+        // Update progress ring
+        function updateProgressRing() {
+            if (time === 0) {
+                progressRing.style.transform = 'rotate(0deg)';
+                return;
+            }
+            const totalTime = (parseInt(minutesInput.value) * 60) + parseInt(secondsInput.value);
+            const progress = (time / totalTime) * 360;
+            progressRing.style.transform = `rotate(${progress}deg)`;
+        }
+
+        // Show notification
+        function showNotification(message, duration = 2000) {
+            notification.textContent = message;
+            notification.classList.add('visible');
+            setTimeout(() => {
+                notification.classList.remove('visible');
+            }, duration);
+        }
+
+        // Update mode indicator
+        function updateModeIndicator() {
+            if (isAdjusting) {
+                modeIndicator.textContent = 'Adjusting Time';
+                modeIndicator.classList.add('visible');
+            } else if (isRunning) {
+                modeIndicator.textContent = 'Timer Running';
+                modeIndicator.classList.add('visible');
+            } else {
+                modeIndicator.classList.remove('visible');
+            }
         }
     </script>
 </body>
