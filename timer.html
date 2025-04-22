@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer - Game of the Day</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+        }
+
+        .stopwatch {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 30px rgba(0, 195, 255, 0.2);
+            border: 2px solid rgba(0, 195, 255, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        .outer-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 195, 255, 0.5);
+            cursor: grab;
+            transition: transform 0.1s ease;
+            box-shadow: 0 0 20px rgba(0, 195, 255, 0.1);
+            user-select: none;
+        }
+
+        .outer-ring:hover {
+            border-color: rgba(0, 195, 255, 0.8);
+            box-shadow: 0 0 30px rgba(0, 195, 255, 0.3);
+        }
+
+        .time-display {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+            font-family: 'Arial', sans-serif;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 5px;
+            background: rgba(0, 195, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid rgba(0, 195, 255, 0.3);
+        }
+
+        button:hover {
+            background: rgba(0, 195, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 195, 255, 0.2);
+        }
+
+        .hand {
+            position: absolute;
+            left: 50%;
+            bottom: 50%;
+            transform-origin: bottom center;
+            background: rgba(0, 195, 255, 0.8);
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 195, 255, 0.5);
+        }
+
+        .minute-hand {
+            width: 3px;
+            height: 100px;
+            transform: translateX(-50%) rotate(0deg);
+        }
+
+        .second-hand {
+            width: 2px;
+            height: 120px;
+            background: rgba(255, 0, 100, 0.8);
+            transform: translateX(-50%) rotate(0deg);
+            box-shadow: 0 0 10px rgba(255, 0, 100, 0.5);
+        }
+
+        .center-dot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: rgba(0, 195, 255, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 15px rgba(0, 195, 255, 0.5);
+        }
+
+        .minute-marks {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+        }
+
+        .minute-mark {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background: rgba(0, 195, 255, 0.3);
+            left: 50%;
+            top: 0;
+            transform-origin: 50% 150px;
+        }
+
+        .minute-mark.large {
+            height: 15px;
+            background: rgba(0, 195, 255, 0.5);
+        }
+
+        .time-input {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .time-input input {
+            width: 60px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 195, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .time-input input:focus {
+            outline: none;
+            border-color: rgba(0, 195, 255, 0.8);
+            box-shadow: 0 0 10px rgba(0, 195, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-container">
+        <audio id="alarm" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+        <audio id="scrollSound" src="https://assets.mixkit.co/active_storage/sfx/2570/2570-preview.mp3" preload="auto"></audio>
+        <div class="stopwatch">
+            <div class="outer-ring"></div>
+            <div class="minute-marks" id="minute-marks"></div>
+            <div class="hand minute-hand"></div>
+            <div class="hand second-hand"></div>
+            <div class="center-dot"></div>
+            <div class="time-display">00:00</div>
+        </div>
+        <div class="time-input">
+            <input type="number" id="minutes" min="0" max="60" value="0" placeholder="Min">
+            <span>:</span>
+            <input type="number" id="seconds" min="0" max="59" value="0" placeholder="Sec">
+        </div>
+        <div class="controls">
+            <button id="start">Start</button>
+            <button id="pause">Pause</button>
+            <button id="reset">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        const outerRing = document.querySelector('.outer-ring');
+        const minuteHand = document.querySelector('.minute-hand');
+        const secondHand = document.querySelector('.second-hand');
+        const timeDisplay = document.querySelector('.time-display');
+        const startButton = document.getElementById('start');
+        const pauseButton = document.getElementById('pause');
+        const resetButton = document.getElementById('reset');
+        const minutesInput = document.getElementById('minutes');
+        const secondsInput = document.getElementById('seconds');
+        const minuteMarks = document.getElementById('minute-marks');
+
+        // Create minute marks
+        for (let i = 0; i < 60; i++) {
+            const mark = document.createElement('div');
+            mark.className = 'minute-mark';
+            if (i % 5 === 0) {
+                mark.classList.add('large');
+            }
+            mark.style.transform = `rotate(${i * 6}deg)`;
+            minuteMarks.appendChild(mark);
+        }
+
+        let isDragging = false;
+        let startAngle = 0;
+        let timer = null;
+        let time = 0;
+        let isRunning = false;
+        let isAlarming = false;
+        let flashInterval;
+        let lastScrollTime = 0;
+        let scrollAccumulator = 0;
+        const SCROLL_THRESHOLD = 50; // Adjust this value to change sensitivity
+        let lastTouchY = 0;
+        let isTouchMoving = false;
+
+        function updateDisplay() {
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update hands
+            const minuteDegrees = (time / 3600) * 360;
+            const secondDegrees = ((time % 60) / 60) * 360;
+            
+            minuteHand.style.transform = `translateX(-50%) rotate(${minuteDegrees}deg)`;
+            secondHand.style.transform = `translateX(-50%) rotate(${secondDegrees}deg)`;
+        }
+
+        function triggerAlarm() {
+            if (isAlarming) return;
+            isAlarming = true;
+            const alarm = document.getElementById('alarm');
+            alarm.loop = true;
+            alarm.play();
+            
+            let isWhite = false;
+            flashInterval = setInterval(() => {
+                document.querySelector('.timer-container').style.background = isWhite ? 'linear-gradient(135deg, #1a1a2e, #16213e)' : 'linear-gradient(135deg, #ffffff, #f0f0f0)';
+                isWhite = !isWhite;
+            }, 500);
+        }
+
+        function stopAlarm() {
+            if (!isAlarming) return;
+            isAlarming = false;
+            const alarm = document.getElementById('alarm');
+            alarm.pause();
+            alarm.currentTime = 0;
+            clearInterval(flashInterval);
+            document.querySelector('.timer-container').style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
+        }
+
+        function startTimer() {
+            if (!isRunning && time > 0) {
+                isRunning = true;
+                timer = setInterval(() => {
+                    if (time > 0) {
+                        time--;
+                        updateDisplay();
+                    } else {
+                        pauseTimer();
+                        triggerAlarm();
+                    }
+                }, 1000);
+            }
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timer);
+            stopAlarm();
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            stopAlarm();
+            time = 0;
+            minutesInput.value = '0';
+            secondsInput.value = '0';
+            updateDisplay();
+        }
+
+        function setTime() {
+            const minutes = parseInt(minutesInput.value) || 0;
+            const seconds = parseInt(secondsInput.value) || 0;
+            time = Math.min(3600, minutes * 60 + seconds);
+            updateDisplay();
+        }
+
+        // Input validation and automatic update
+        minutesInput.addEventListener('input', () => {
+            let value = parseInt(minutesInput.value);
+            if (isNaN(value)) value = 0;
+            minutesInput.value = Math.min(60, Math.max(0, value));
+            setTime();
+        });
+
+        secondsInput.addEventListener('input', () => {
+            let value = parseInt(secondsInput.value);
+            if (isNaN(value)) value = 0;
+            secondsInput.value = Math.min(59, Math.max(0, value));
+            setTime();
+        });
+
+        function playScrollSound() {
+            const scrollSound = document.getElementById('scrollSound');
+            scrollSound.currentTime = 0;
+            scrollSound.play();
+        }
+
+        function vibrate() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50); // Vibrate for 50ms
+            }
+        }
+
+        function handleScroll(e) {
+            e.preventDefault();
+            const now = Date.now();
+            if (now - lastScrollTime < 50) return; // Debounce scroll events
+            
+            lastScrollTime = now;
+            scrollAccumulator += e.deltaY;
+            
+            if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
+                const direction = Math.sign(scrollAccumulator);
+                const timeChange = direction * 5; // Change time by 5 seconds per scroll
+                time = Math.max(0, Math.min(3600, time + timeChange));
+                
+                // Update input fields
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                minutesInput.value = minutes;
+                secondsInput.value = seconds;
+                
+                updateDisplay();
+                scrollAccumulator = 0;
+                
+                // Provide feedback
+                playScrollSound();
+                vibrate();
+            }
+        }
+
+        function handleTouchStart(e) {
+            isTouchMoving = true;
+            lastTouchY = e.touches[0].clientY;
+            vibrate();
+        }
+
+        function handleTouchMove(e) {
+            if (!isTouchMoving) return;
+            e.preventDefault();
+            
+            const currentY = e.touches[0].clientY;
+            const deltaY = lastTouchY - currentY;
+            lastTouchY = currentY;
+            
+            scrollAccumulator += deltaY;
+            
+            if (Math.abs(scrollAccumulator) >= SCROLL_THRESHOLD) {
+                const direction = Math.sign(scrollAccumulator);
+                const timeChange = direction * 5;
+                time = Math.max(0, Math.min(3600, time + timeChange));
+                
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                minutesInput.value = minutes;
+                secondsInput.value = seconds;
+                
+                updateDisplay();
+                scrollAccumulator = 0;
+                
+                playScrollSound();
+                vibrate();
+            }
+        }
+
+        function handleTouchEnd() {
+            isTouchMoving = false;
+        }
+
+        // Add event listeners for both desktop and mobile
+        outerRing.addEventListener('wheel', handleScroll, { passive: false });
+        outerRing.addEventListener('touchstart', handleTouchStart, { passive: false });
+        outerRing.addEventListener('touchmove', handleTouchMove, { passive: false });
+        outerRing.addEventListener('touchend', handleTouchEnd);
+        
+        // Remove the old mouse drag functionality
+        outerRing.removeEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+        });
+
+        document.removeEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+            const angleDiff = currentAngle - startAngle;
+            
+            const timeDiff = Math.round((angleDiff / (2 * Math.PI)) * 3600);
+            time = Math.max(0, Math.min(3600, time + timeDiff));
+            
+            const minutes = Math.floor(time / 60);
+            const seconds = time % 60;
+            minutesInput.value = minutes;
+            secondsInput.value = seconds;
+            
+            updateDisplay();
+            startAngle = currentAngle;
+        });
+
+        document.removeEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        startButton.addEventListener('click', startTimer);
+        pauseButton.addEventListener('click', pauseTimer);
+        resetButton.addEventListener('click', resetTimer);
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html> 
