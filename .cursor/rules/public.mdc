@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+[index.html](mdc:index.html) - update this file to add whatever app I've created to it and make it the most recent post. Take the old game that was there and add it to the previous games list

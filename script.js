@@ -11,72 +11,8 @@ function updateCurrentDate() {
     }
 }
 
-// Previous games data
-const previousGames = [
-    {
-        date: new Date(2025, 3, 22),
-        name: "Tetris",
-        category: "Classic",
-        url: "tetris.html"
-    },
-    {
-        date: new Date(2025, 3, 21),
-        name: "Mario",
-        category: "Platformer",
-        url: "mario.html"
-    },
-    {
-        date: new Date(2025, 3, 20),
-        name: "Archer",
-        category: "Action",
-        url: "archer.html"
-    },
-    {
-        date: new Date(2025, 3, 19),
-        name: "Fitness",
-        category: "Health",
-        url: "fitness.html"
-    },
-    {
-        date: new Date(2025, 3, 18),
-        name: "Flappy",
-        category: "Arcade",
-        url: "flappy.html"
-    },
-    {
-        date: new Date(2025, 3, 17),
-        name: "Frogger",
-        category: "Classic",
-        url: "frogger.html"
-    },
-    {
-        date: new Date(2025, 3, 16),
-        name: "Pong",
-        category: "Classic",
-        url: "pong.html"
-    },
-    {
-        date: new Date(2025, 3, 15),
-        name: "Space Invaders",
-        category: "Classic",
-        url: "space.html"
-    },
-    {
-        date: new Date(2025, 3, 14),
-        name: "Workout",
-        category: "Fitness",
-        url: "workout.html"
-    },
-    {
-        date: new Date(2025, 3, 13),
-        name: "Connections",
-        category: "Puzzle",
-        url: "connections.html"
-    }
-];
-
 // Generate previous games list
-function generateGameList() {
+async function generateGameList() {
     const gameListElement = document.getElementById('previous-games-list');
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     
@@ -84,11 +20,18 @@ function generateGameList() {
     gameListElement.classList.add('loading');
     
     try {
+        // Fetch games data
+        const response = await fetch('games.json');
+        if (!response.ok) {
+            throw new Error('Failed to load games data');
+        }
+        const data = await response.json();
+        
         // Clear existing content
         gameListElement.innerHTML = '';
         
-        previousGames.forEach(game => {
-            const gameDate = game.date.toLocaleDateString('en-US', dateOptions);
+        data.games.forEach(game => {
+            const gameDate = new Date(game.date).toLocaleDateString('en-US', dateOptions);
             
             const gameElement = document.createElement('div');
             gameElement.className = 'game-item';

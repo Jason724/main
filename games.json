@@ -1,0 +1,64 @@
+{
+    "games": [
+        {
+            "date": "2025-04-22",
+            "name": "Tetris",
+            "category": "Classic",
+            "url": "tetris.html"
+        },
+        {
+            "date": "2025-04-21",
+            "name": "Mario",
+            "category": "Platformer",
+            "url": "mario.html"
+        },
+        {
+            "date": "2025-04-20",
+            "name": "Archer",
+            "category": "Action",
+            "url": "archer.html"
+        },
+        {
+            "date": "2025-04-19",
+            "name": "Fitness",
+            "category": "Health",
+            "url": "fitness.html"
+        },
+        {
+            "date": "2025-04-18",
+            "name": "Flappy",
+            "category": "Arcade",
+            "url": "flappy.html"
+        },
+        {
+            "date": "2025-04-17",
+            "name": "Frogger",
+            "category": "Classic",
+            "url": "frogger.html"
+        },
+        {
+            "date": "2025-04-16",
+            "name": "Pong",
+            "category": "Classic",
+            "url": "pong.html"
+        },
+        {
+            "date": "2025-04-15",
+            "name": "Space Invaders",
+            "category": "Classic",
+            "url": "space.html"
+        },
+        {
+            "date": "2025-04-14",
+            "name": "Workout",
+            "category": "Fitness",
+            "url": "workout.html"
+        },
+        {
+            "date": "2025-04-13",
+            "name": "Connections",
+            "category": "Puzzle",
+            "url": "connections.html"
+        }
+    ]
+} 
