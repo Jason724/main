@@ -153,6 +153,10 @@
             color: white;
             text-align: center;
             font-size: 1rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            touch-action: none;
         }
 
         .time-input input:focus {
@@ -224,6 +228,9 @@
         let lastAngle = 0;
         let totalRotation = 0;
         const ROTATION_THRESHOLD = 10; // degrees of rotation needed for a time change
+        let isFineControl = false; // Track if we're in fine control mode
+        let isAdjusting = false; // Track if we're currently adjusting the time
+        let isDraggingMinuteHand = false;
 
         function updateDisplay() {
             const minutes = Math.floor(time / 60);
@@ -403,11 +410,25 @@
 
         function handleInteractionStart(e) {
             e.preventDefault();
-            lastAngle = getAngleFromCenter(e);
-            vibrate();
+            // Check if we're starting a rotation (not just clicking)
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const x = e.clientX || e.touches[0].clientX;
+            const y = e.clientY || e.touches[0].clientY;
+            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+            
+            // Only start adjusting if we're near the edge (within 20px of the outer ring)
+            if (distance > rect.width/2 - 20) {
+                isAdjusting = true;
+                lastAngle = getAngleFromCenter(e);
+                isFineControl = e.shiftKey || e.altKey;
+                vibrate();
+            }
         }
 
         function handleInteractionMove(e) {
+            if (!isAdjusting) return;
             e.preventDefault();
             const currentAngle = getAngleFromCenter(e);
             let angleDiff = currentAngle - lastAngle;
@@ -421,7 +442,7 @@
 
             if (Math.abs(totalRotation) >= ROTATION_THRESHOLD) {
                 const direction = Math.sign(totalRotation);
-                const timeChange = direction * 5; // Change time by 5 seconds per threshold
+                const timeChange = isFineControl ? direction : direction * 5;
                 time = Math.max(0, Math.min(3600, time + timeChange));
                 
                 const minutes = Math.floor(time / 60);
@@ -438,8 +459,112 @@
         }
 
         function handleInteractionEnd() {
-            totalRotation = 0;
+            if (isAdjusting) {
+                totalRotation = 0;
+                isFineControl = false;
+                isAdjusting = false;
+            }
         }
+
+        function handleMinuteHandStart(e) {
+            e.preventDefault();
+            isDraggingMinuteHand = true;
+            lastAngle = getAngleFromCenter(e);
+            vibrate();
+        }
+
+        function handleMinuteHandMove(e) {
+            if (!isDraggingMinuteHand) return;
+            e.preventDefault();
+            const currentAngle = getAngleFromCenter(e);
+            let angleDiff = currentAngle - lastAngle;
+
+            // Handle crossing the -180/180 boundary
+            if (angleDiff > 180) angleDiff -= 360;
+            if (angleDiff < -180) angleDiff += 360;
+
+            // Convert angle difference to minutes (360 degrees = 60 minutes)
+            const minuteChange = Math.round((angleDiff / 360) * 60);
+            if (minuteChange !== 0) {
+                time = Math.max(0, Math.min(3600, time + (minuteChange * 60)));
+                
+                const minutes = Math.floor(time / 60);
+                const seconds = time % 60;
+                minutesInput.value = minutes;
+                secondsInput.value = seconds;
+                
+                updateDisplay();
+                lastAngle = currentAngle;
+                vibrate();
+            }
+        }
+
+        function handleMinuteHandEnd() {
+            isDraggingMinuteHand = false;
+        }
+
+        function handleNumberInputScroll(e) {
+            e.preventDefault();
+            const input = e.target;
+            const currentValue = parseInt(input.value) || 0;
+            const maxValue = input.id === 'minutes' ? 60 : 59;
+            const minValue = 0;
+            
+            // Determine scroll direction and adjust value
+            const delta = Math.sign(e.deltaY);
+            let newValue = currentValue - delta;
+            
+            // Handle wrapping around
+            if (newValue > maxValue) newValue = minValue;
+            if (newValue < minValue) newValue = maxValue;
+            
+            input.value = newValue;
+            setTime();
+            vibrate();
+        }
+
+        // Add keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                if (!isRunning) {
+                    startTimer();
+                } else {
+                    pauseTimer();
+                }
+            }
+        });
+
+        // Add click to start/pause (only when not adjusting)
+        outerRing.addEventListener('click', (e) => {
+            if (!isAdjusting) {
+                if (!isRunning) {
+                    startTimer();
+                } else {
+                    pauseTimer();
+                }
+            }
+        });
+
+        // Add minute hand drag events
+        minuteHand.addEventListener('touchstart', handleMinuteHandStart, { passive: false });
+        document.addEventListener('touchmove', handleMinuteHandMove, { passive: false });
+        document.addEventListener('touchend', handleMinuteHandEnd);
+
+        // Make number inputs scrollable
+        minutesInput.addEventListener('wheel', handleNumberInputScroll, { passive: false });
+        secondsInput.addEventListener('wheel', handleNumberInputScroll, { passive: false });
+
+        // Prevent keyboard from showing on mobile
+        minutesInput.addEventListener('focus', (e) => {
+            e.preventDefault();
+            minutesInput.blur();
+        });
+
+        secondsInput.addEventListener('focus', (e) => {
+            e.preventDefault();
+            secondsInput.blur();
+        });
 
         // Remove old event listeners
         outerRing.removeEventListener('wheel', handleScroll);
