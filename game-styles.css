@@ -1,0 +1,185 @@
+/* 
+ * Game Design System
+ * This file contains shared styles and components for all games
+ * 
+ * Usage:
+ * 1. Link this file in your game's HTML: <link rel="stylesheet" href="game-styles.css">
+ * 2. Use the provided classes and CSS variables
+ * 3. Override specific styles as needed in your game's specific CSS
+ */
+
+:root {
+    /* Color System */
+    --game-bg-primary: #222;
+    --game-bg-secondary: #333;
+    --game-text-primary: #fff;
+    --game-text-secondary: #ccc;
+    --game-accent: #0066cc;
+    --game-success: #4CAF50;
+    --game-danger: #f44336;
+    --game-warning: #ff9800;
+    
+    /* Spacing System */
+    --game-spacing-xs: 4px;
+    --game-spacing-sm: 8px;
+    --game-spacing-md: 16px;
+    --game-spacing-lg: 24px;
+    --game-spacing-xl: 32px;
+    
+    /* Typography */
+    --game-font-primary: 'Arial', sans-serif;
+    --game-font-mono: 'Courier New', monospace;
+    --game-font-size-sm: 12px;
+    --game-font-size-md: 16px;
+    --game-font-size-lg: 24px;
+    --game-font-size-xl: 32px;
+    
+    /* Border Radius */
+    --game-border-radius-sm: 4px;
+    --game-border-radius-md: 8px;
+    --game-border-radius-lg: 12px;
+    
+    /* Shadows */
+    --game-shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --game-shadow-md: 0 4px 8px rgba(0,0,0,0.2);
+    --game-shadow-lg: 0 8px 16px rgba(0,0,0,0.3);
+}
+
+/* Base Game Container */
+.game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 600px;
+    max-height: 900px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--game-bg-primary);
+    padding: var(--game-spacing-md);
+    margin: 0 auto;
+    box-sizing: border-box;
+    font-family: var(--game-font-primary);
+    color: var(--game-text-primary);
+}
+
+/* Game Area */
+.game-area {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    margin: 0 auto;
+}
+
+/* Game Controls */
+.game-controls {
+    display: flex;
+    gap: var(--game-spacing-md);
+    margin-top: var(--game-spacing-md);
+}
+
+.game-button {
+    padding: var(--game-spacing-sm) var(--game-spacing-md);
+    border: none;
+    border-radius: var(--game-border-radius-md);
+    background-color: var(--game-accent);
+    color: var(--game-text-primary);
+    font-size: var(--game-font-size-md);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.game-button:hover {
+    background-color: var(--game-success);
+}
+
+/* Score Display */
+.score-display {
+    position: absolute;
+    top: var(--game-spacing-md);
+    right: var(--game-spacing-md);
+    background-color: var(--game-bg-secondary);
+    padding: var(--game-spacing-sm) var(--game-spacing-md);
+    border-radius: var(--game-border-radius-md);
+    font-size: var(--game-font-size-md);
+    box-shadow: var(--game-shadow-sm);
+}
+
+/* Game Over Screen */
+.game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.game-over-title {
+    font-size: var(--game-font-size-xl);
+    margin-bottom: var(--game-spacing-lg);
+    color: var(--game-text-primary);
+}
+
+/* Pause Screen */
+.pause-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 50;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .game-container {
+        padding: var(--game-spacing-sm);
+    }
+    
+    .game-button {
+        padding: var(--game-spacing-xs) var(--game-spacing-sm);
+        font-size: var(--game-font-size-sm);
+    }
+    
+    .score-display {
+        font-size: var(--game-font-size-sm);
+    }
+}
+
+/* Animation Classes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Utility Classes */
+.text-center {
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+.visible {
+    display: block;
+} 

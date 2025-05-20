@@ -1,241 +1,112 @@
-<div id="pause-screen">
-            <p>PAUSED</p>
-            <p>Click ⏸️ or press P to resume</p>
-        </div><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Simple Tetris</title>
+    <!-- Link to shared game styles -->
+    <link rel="stylesheet" href="game-styles.css">
+    <!-- Game-specific styles -->
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* Tetris-specific styles that override or extend the shared styles */
+        .tetris-grid {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(20, 1fr);
+            gap: 1px;
+            width: 300px;
+            height: 600px;
+            background-color: var(--game-bg-secondary);
+            border: 2px solid var(--game-text-secondary);
         }
-        body {
-            font-family: Arial, sans-serif;
-            height: 100vh;
+
+        .tetris-cell {
+            background-color: var(--game-bg-primary);
+            border: 1px solid var(--game-bg-secondary);
+        }
+
+        /* Tetromino colors */
+        .tetromino-I { background-color: #00f0f0; }
+        .tetromino-J { background-color: #0000f0; }
+        .tetromino-L { background-color: #f0a000; }
+        .tetromino-O { background-color: #f0f000; }
+        .tetromino-S { background-color: #00f000; }
+        .tetromino-T { background-color: #a000f0; }
+        .tetromino-Z { background-color: #f00000; }
+
+        /* Next piece display */
+        .next-piece {
+            width: 120px;
+            height: 120px;
+            background-color: var(--game-bg-secondary);
+            padding: var(--game-spacing-sm);
+            border-radius: var(--game-border-radius-md);
+            margin-top: var(--game-spacing-md);
+        }
+
+        /* Game info panel */
+        .game-info {
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: #f0f0f0;
-            overflow: hidden;
-            touch-action: manipulation;
+            gap: var(--game-spacing-md);
+            margin-left: var(--game-spacing-lg);
         }
-        #game-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            max-width: 600px;
-            max-height: 900px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background-color: #222;
-            padding: 10px;
-            margin: 0 auto;
-            box-sizing: border-box;
-        }
-        
-        #game-area {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            position: relative;
-            margin: 0 auto;
-        }
-        
-        #top-panel {
-            display: flex;
-            width: 100%;
-            justify-content: flex-end;
-            margin-bottom: 5px;
-        }
-        
-        #pause-btn {
-            width: 50px;
-            height: 30px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-        }
-        
-        #pause-btn:hover {
-            background-color: #45a049;
-        }
-        
-        #next-piece-container {
-            width: 100px;
-            height: 100px;
-            background-color: #111;
-            border: 2px solid #444;
-            margin-right: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        #next-piece-label {
-            color: white;
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
-        
-        #tetris-canvas {
-            background-color: #111;
-            border: 2px solid #444;
-            display: block;
-        }
-        #score-container {
-            color: white;
-            font-size: 18px;
-            margin-bottom: 10px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-        }
-        #instructions {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 5px;
-            text-align: center;
-            font-size: 18px;
-            opacity: 1;
-            transition: opacity 0.5s;
-            pointer-events: none;
-            z-index: 100;
-            max-width: 80%;
-        }
-        #start-screen {
-            position: absolute;
-            top: 30%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-            z-index: 100;
-        }
-        #start-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        #start-btn:hover {
-            background-color: #45a049;
-        }
-        #game-over {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-            z-index: 100;
-        }
-        #restart-btn {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        #restart-btn:hover {
-            background-color: #45a049;
-        }
-        #level-up {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-            z-index: 100;
-            font-size: 24px;
-        }
-        #pause-screen {
-            display: none;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            text-align: center;
-            z-index: 100;
-            font-size: 24px;
+
+        /* Controls info */
+        .controls-info {
+            background-color: var(--game-bg-secondary);
+            padding: var(--game-spacing-md);
+            border-radius: var(--game-border-radius-md);
+            font-size: var(--game-font-size-sm);
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="score-container">
-            <div>Score: <span id="score">0</span></div>
-            <div>Level: <span id="level">1</span>/6</div>
-            <div>Lines: <span id="lines">0</span>/<span id="next-level-lines">10</span></div>
-        </div>
-        <div id="game-area">
-            <div id="top-panel">
-                <button id="pause-btn">⏸️</button>
+    <div class="game-container">
+        <div class="game-area">
+            <div class="score-display">
+                Score: <span id="score">0</span> | Level: <span id="level">1</span> | Lines: <span id="lines">0</span>
             </div>
-            <canvas id="tetris-canvas"></canvas>
+            <div style="display:none;">
+                <span id="next-level-lines"></span>
+                <span id="final-score"></span>
+                <span id="final-level"></span>
+            </div>
+            <canvas id="tetris-canvas" width="300" height="600" style="display:block;margin:auto;"></canvas>
+            <div class="tetris-grid" id="grid"></div>
+            
+            <div class="game-info">
+                <div class="next-piece" id="next-piece"></div>
+                <div class="controls-info">
+                    <p>Controls:</p>
+                    <p>← → : Move</p>
+                    <p>↑ : Rotate</p>
+                    <p>↓ : Soft Drop</p>
+                    <p>Space : Hard Drop</p>
+                    <p>P : Pause</p>
+                </div>
+            </div>
         </div>
-        <div id="instructions">
-            <p>Desktop: Space to rotate, Arrow keys to move, Up arrow to hard drop</p>
-            <p>Mobile: Tap to rotate, Swipe to move, Swipe up to hard drop</p>
-            <p>Clear lines to score points!</p>
+
+        <div class="game-controls">
+            <button class="game-button" id="start-btn">Start Game</button>
+            <button class="game-button" id="pause-btn">Pause</button>
         </div>
-        <div id="start-screen">
-            <h2>Simple Tetris</h2>
-            <button id="start-btn">Start Game</button>
+
+        <div class="game-over-screen hidden" id="game-over">
+            <h2 class="game-over-title">Game Over</h2>
+            <button class="game-button" id="restart-btn">Play Again</button>
         </div>
-        <div id="game-over">
-            <h2>Game Over</h2>
-            <p>Your Score: <span id="final-score">0</span></p>
-            <p>Level Reached: <span id="final-level">1</span></p>
-            <button id="restart-btn">Play Again</button>
+
+        <div class="pause-screen hidden" id="pause-screen">
+            <h2 class="game-over-title">PAUSED</h2>
+            <p>Click ⏸️ or press P to resume</p>
         </div>
-        <div id="level-up">
-            <p>Level Up!</p>
-        </div>
+        
+        <div id="start-screen" style="display:none;"></div>
+        <div id="instructions" style="display:none;"></div>
+        <div id="level-up" style="display:none;"></div>
     </div>
 
     <script>
@@ -718,6 +589,7 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawBoard();
             drawPiece();
+            drawNextPiece();
         }
 
         // Event listeners
